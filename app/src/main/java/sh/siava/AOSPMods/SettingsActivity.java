@@ -49,21 +49,6 @@ public class SettingsActivity extends AppCompatActivity implements
 
         backButtonDisabled();
         
-        //update settings from previous config file
-        try {
-            if(PreferenceManager.getDefaultSharedPreferences(DPContext).contains("Show4GIcon"))
-            {
-                boolean fourGEnabled = PreferenceManager.getDefaultSharedPreferences(DPContext).getBoolean("Show4GIcon", false);
-                if(fourGEnabled)
-                {
-                    PreferenceManager.getDefaultSharedPreferences(DPContext).edit().putInt("LTE4GIconMod", 2).apply();
-                }
-                PreferenceManager.getDefaultSharedPreferences(DPContext).edit().remove("Show4GIcon").commit();
-            }
-        }
-        catch(Exception e){}
-
-
         setContentView(R.layout.settings_activity);
 
         if (savedInstanceState == null) {
@@ -195,8 +180,8 @@ public class SettingsActivity extends AppCompatActivity implements
     
             findPreference("batteryFastChargingColor").setVisible(prefs.getBoolean("indicateFastCharging", false) && bBarEnabled);
             findPreference("batteryChargingColor").setVisible(prefs.getBoolean("indicateCharging", false) && bBarEnabled);
-            findPreference("batteryWarningColor").setVisible(!warnZero && bBarEnabled && !isColorful);
-            findPreference("batteryCriticalColor").setVisible((!critZero || transitColors) && bBarEnabled && !isColorful && findPreference("batteryWarningColor").isVisible());
+            findPreference("batteryWarningColor").setVisible(!warnZero && bBarEnabled);
+            findPreference("batteryCriticalColor").setVisible((!critZero || transitColors) && bBarEnabled && findPreference("batteryWarningColor").isVisible());
     
             findPreference("BBarTransitColors").setVisible(bBarEnabled && !isColorful);
             findPreference("BBOnlyWhileCharging").setVisible(bBarEnabled);
@@ -207,10 +192,77 @@ public class SettingsActivity extends AppCompatActivity implements
             findPreference("BBSetCentered").setVisible(bBarEnabled);
             findPreference("indicateCharging").setVisible(bBarEnabled);
             findPreference("indicateFastCharging").setVisible(bBarEnabled);
-            findPreference("batteryWarningRange").setVisible(bBarEnabled && !isColorful);
+            findPreference("batteryWarningRange").setVisible(bBarEnabled);
         }
     
     }
+    
+    public static class SBBIconFragment extends PreferenceFragmentCompat {
+        
+        @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            getPreferenceManager().setStorageDeviceProtected();
+            setPreferencesFromResource(R.xml.statusbar_batteryicon_prefs, rootKey);
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext().createDeviceProtectedStorageContext());
+            prefs.registerOnSharedPreferenceChangeListener(listener);
+            updateBatteryMod();
+            updateBatteryIconScaleFactor();
+            updateVisibility(prefs);
+        }
+        
+        private void updateVisibility(SharedPreferences prefs) {
+            int style = Integer.parseInt(prefs.getString("BatteryStyle", "0"));
+            String json = prefs.getString("BIconbatteryWarningRange", "");
+            boolean critZero = RangeBarHelper.getLowValueFromJsonString(json) == 0;
+            boolean warnZero = RangeBarHelper.getHighValueFromJsonString(json) == 0;
+            boolean colorful = prefs.getBoolean("BIconColorful", false);
+            findPreference("DualToneBatteryOverlay").setVisible(style==0);
+            findPreference("BatteryIconScaleFactor").setVisible(style<99);
+            findPreference("BatteryShowPercent").setVisible(style == 1 || style == 2);
+            findPreference("BIconindicateCharging").setVisible(style==3);
+            findPreference("batteryIconChargingColor").setVisible(style==3 && prefs.getBoolean("BIconindicateCharging", false));
+            findPreference("BIconindicateFastCharging").setVisible(style==3);
+            findPreference("batteryIconFastChargingColor").setVisible(style==3 && prefs.getBoolean("BIconindicateFastCharging", false));
+            findPreference("BIconColorful").setVisible(style==3 && !prefs.getBoolean("BIconTransitColors", false));
+            findPreference("BIconTransitColors").setVisible(style==3 && !prefs.getBoolean("BIconColorful", false));
+            findPreference("BIconbatteryWarningRange").setVisible(style==3);
+            findPreference("BIconbatteryCriticalColor").setVisible(style==3 && (colorful || !critZero));
+            findPreference("BIconbatteryWarningColor").setVisible(style==3 && (colorful || !warnZero));
+        }
+    
+        SharedPreferences.OnSharedPreferenceChangeListener listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+            @Override
+            public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                updateBatteryMod();
+                updateBatteryIconScaleFactor();
+                updateVisibility(sharedPreferences);
+            }
+        };
+    
+        private void updateBatteryIconScaleFactor() {
+            try {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext().createDeviceProtectedStorageContext());
+            
+                findPreference("BatteryIconScaleFactor").setSummary(prefs.getInt("BatteryIconScaleFactor", 50)*2 + getString(R.string.battery_size_summary));
+            }
+            catch(Exception e){
+                return;
+            }
+        
+        }
+    
+        private void updateBatteryMod() {
+            try {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext().createDeviceProtectedStorageContext());
+            
+                boolean enabled = !(prefs.getString("BatteryStyle", "0").equals(("0")));
+                findPreference("BatteryShowPercent").setEnabled(enabled);
+            }catch(Exception e){}
+        }
+    
+    
+    }
+    
     
     public static class MiscFragment extends PreferenceFragmentCompat {
 
@@ -252,46 +304,12 @@ public class SettingsActivity extends AppCompatActivity implements
 
     public static class StatusbarFragment extends PreferenceFragmentCompat {
 
-        SharedPreferences.OnSharedPreferenceChangeListener listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
-            @Override
-            public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-                if (key.equals("BatteryStyle")) {
-                    updateBatteryMod();
-                } else if (key.equals("BatteryIconScaleFactor")) {
-                    updateBatteryIconScaleFactor();
-                }
-            }
-        };
-
-        private void updateBatteryIconScaleFactor() {
-            try {
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext().createDeviceProtectedStorageContext());
-
-                findPreference("BatteryIconScaleFactor").setSummary(prefs.getInt("BatteryIconScaleFactor", 50)*2 + getString(R.string.battery_size_summary));
-            }
-            catch(Exception e){
-                return;
-            }
-
-        }
-
-        private void updateBatteryMod() {
-            try {
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext().createDeviceProtectedStorageContext());
-
-                boolean enabled = !(prefs.getString("BatteryStyle", "0").equals(("0")));
-                findPreference("BatteryShowPercent").setEnabled(enabled);
-            }catch(Exception e){}
-        }
 
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             getPreferenceManager().setStorageDeviceProtected();
             setPreferencesFromResource(R.xml.statusbar_settings, rootKey);
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext().createDeviceProtectedStorageContext());
-            prefs.registerOnSharedPreferenceChangeListener(listener);
-            updateBatteryMod();
-            updateBatteryIconScaleFactor();
         }
     }
 
