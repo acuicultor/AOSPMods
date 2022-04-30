@@ -34,8 +34,8 @@ public class CarrierTextManager implements IXposedModPack {
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) {
         if(!lpparam.packageName.equals(listenPackage)) return;
 
-        Class CarrierTextManagerClass = XposedHelpers.findClass("com.android.keyguard.CarrierTextManager", lpparam.classLoader);
-        Class CarrierTextCallbackInfo = XposedHelpers.findClass("com.android.keyguard.CarrierTextManager$CarrierTextCallbackInfo", lpparam.classLoader);
+        Class<?> CarrierTextManagerClass = XposedHelpers.findClass("com.android.keyguard.CarrierTextManager", lpparam.classLoader);
+        Class<?> CarrierTextCallbackInfo = XposedHelpers.findClass("com.android.keyguard.CarrierTextManager$CarrierTextCallbackInfo", lpparam.classLoader);
 
         XposedBridge.hookAllConstructors(CarrierTextManagerClass, new XC_MethodHook() {
             @Override
@@ -60,10 +60,9 @@ public class CarrierTextManager implements IXposedModPack {
         });
 
     }
-
+    
     @Override
-    public String getListenPack() {
-        return listenPackage;
-    }
-
+    public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
+    
+    
 }

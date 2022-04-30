@@ -20,14 +20,17 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.*
 import androidx.annotation.ColorInt
+import androidx.core.graphics.ColorUtils
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class CircleBatteryDrawable(
     private val context: Context,
     frameColor: Int
 ) : BatteryDrawable() {
-    private var fastChargeColor: Int = Color.WHITE
+
+    private var fgColor: Int = Color.WHITE
     private val criticalLevel: Int
     private val warningString: String
     private val framePaint: Paint
@@ -35,7 +38,6 @@ class CircleBatteryDrawable(
     private val warningTextPaint: Paint
     private val textPaint: Paint
     private val boltPaint: Paint
-    private val plusPaint: Paint
     private val powerSavePaint: Paint
     private val boltPoints: FloatArray
     private val boltPath = Path()
@@ -43,20 +45,18 @@ class CircleBatteryDrawable(
     private val frame = RectF()
     private val boltFrame = RectF()
     private val pathEffect = DashPathEffect(floatArrayOf(3f,2f),0f)
-    private val batteryLevels : FloatArray = FloatArray(0)
-    private val batteryColors : IntArray = IntArray(0)
-    private val indicateCharging : Boolean = false
-    private val indicateFastCharging : Boolean = false
 
-    private var chargeColor: Int = Color.WHITE
     private var iconTint = Color.WHITE
     private var intrinsicWidth: Int
     private var intrinsicHeight: Int
     private var height = 0
     private var width = 0
+    private var isCharging = false
+    private var powerSaveColor : Int
 
-    private var BATTERY_STYLE_CIRCLE = 1
-    private var BATTERY_STYLE_DOTTED_CIRCLE = 2
+
+    private val BATTERY_STYLE_CIRCLE = 1
+    private val BATTERY_STYLE_DOTTED_CIRCLE = 2
 
     // Dual tone implies that battery level is a clipped overlay over top of the whole shape
     private var dualTone = false
@@ -68,7 +68,7 @@ class CircleBatteryDrawable(
     private var fastCharging: Boolean = false
 
     override fun setFastCharging(isFastCharging: Boolean) {
-        this.fastCharging = isFastCharging
+        fastCharging = isFastCharging
         if(!isFastCharging)
         {
             charging = false
@@ -129,6 +129,10 @@ class CircleBatteryDrawable(
         super.setBounds(left, top, right, bottom)
         updateSize()
     }
+    private var javaAlpha : Int = 255
+    override fun setAlpha(alpha: Int) {
+        javaAlpha = alpha
+    }
 
     private fun updateSize() {
         val res = context.resources
@@ -151,37 +155,23 @@ class CircleBatteryDrawable(
         return true
     }
 
-    private fun getColorForLevel(percent: Int): Int {
-        for(i in 0 until batteryLevels.size)
-        {
-            if(percent < batteryLevels[i])
-            {
-                return batteryColors[i]
-            }
-        }
-        return iconTint
-    }
-
-    private fun batteryColorForLevel(level: Int) =
-            if (fastCharging && indicateFastCharging)
-                    fastChargeColor
-            else if (charging && indicateCharging)
-                    chargeColor
-            else
-                getColorForLevel(level)
-
     override fun setColors(fgColor: Int, bgColor: Int, singleToneColor: Int) {
+        this.fgColor = fgColor
         val fillColor = if (dualTone) fgColor else singleToneColor
 
         iconTint = fillColor
         framePaint.color = bgColor
 //<Sia: Fixed visibility issues
-        framePaint.alpha = 80
 //>
         invalidateSelf()
     }
 
     override fun draw(c: Canvas) {
+        if (lastUpdate != lastVarUpdate) {
+            lastUpdate = lastVarUpdate
+            refreshShadeColors()
+        }
+
         if (batteryLevel == -1) return
         val circleSize = min(width, height)
         val strokeWidth = circleSize / 6.5f
@@ -201,12 +191,11 @@ class CircleBatteryDrawable(
                 strokeWidth / 2.0f + padding.left, strokeWidth / 2.0f,
                 circleSize - strokeWidth / 2.0f + padding.left
         ] = circleSize - strokeWidth / 2.0f
-        // set the battery charging color
-        batteryPaint.color = batteryColorForLevel(batteryLevel)
-        batteryPaint.alpha = alpha;
-        boltPaint.color = batteryPaint.color
 
-        if (charging) { // define the bolt shape
+        setLevelPaint(batteryPaint, frame.centerX(), frame.centerY())
+
+        if (charging || fastCharging) { // define the bolt shape
+
             val bl = frame.left + frame.width() / 3.0f
             val bt = frame.top + frame.height() / 3.4f
             val br = frame.right - frame.width() / 4.0f
@@ -235,21 +224,27 @@ class CircleBatteryDrawable(
                         boltFrame.top + boltPoints[1] * boltFrame.height()
                 )
             }
+
+            boltPaint.color = if (fastCharging && showFastCharging) fastChargingColor else fgColor
+            boltPaint.alpha = javaAlpha
             c.drawPath(boltPath, boltPaint)
         }
         // draw thin gray ring first
+        framePaint.alpha = (80*javaAlpha/255f).roundToInt()
         c.drawArc(frame, 270f, 360f, false, framePaint)
         // draw colored arc representing charge level
         if (batteryLevel > 0) {
             if (!charging && powerSaving) {
+                powerSavePaint.alpha = javaAlpha
                 c.drawArc(frame, 270f, 3.6f * batteryLevel, false, powerSavePaint)
             } else {
+                batteryPaint.alpha = javaAlpha
                 c.drawArc(frame, 270f, 3.6f * batteryLevel, false, batteryPaint)
             }
         }
         // compute percentage text
         if (!charging && batteryLevel != 100 && showPercentage) {
-            textPaint.color = getColorForLevel(batteryLevel)
+            textPaint.color = fgColor
             textPaint.textSize = height * 0.52f
             val textHeight = -textPaint.fontMetrics.ascent
             val pctText =
@@ -259,28 +254,103 @@ class CircleBatteryDrawable(
                         warningString
             val pctX = width * 0.5f
             val pctY = (height + textHeight) * 0.47f
+            textPaint.alpha = javaAlpha
             c.drawText(pctText, pctX, pctY, textPaint)
         }
     }
 
-    // Some stuff required by Drawable.
-    override fun setAlpha(alpha: Int) {
-        boltPaint.alpha = alpha
-        framePaint.alpha = if (alpha > 20) (alpha - 20) else alpha
-        postInvalidate()
+    private fun setLevelPaint(paint: Paint, cx: Float, cy: Float) {
+        var singleColor: Int = fgColor
+        paint.shader = null
+        if (fastCharging && showFastCharging && batteryLevel < 100) {
+            paint.color = fastChargingColor
+            return
+        } else if (isCharging && showCharging && batteryLevel < 100) {
+            paint.color = chargingColor
+            return
+        } else if (powerSaving) {
+            paint.color = powerSaveColor
+            return
+        }
+
+        if (!colorful || shadeColors.isEmpty()) {
+            for (i in batteryLevels.indices) {
+                if (batteryLevel <= batteryLevels[i]) {
+                    singleColor = if (transitColors && i > 0) {
+                        val range =
+                            batteryLevels[i] - batteryLevels[i - 1]
+                        val currentPos = batteryLevel - batteryLevels[i - 1]
+                        val ratio = currentPos / range
+                        ColorUtils.blendARGB(
+                            batteryColors[i - 1],
+                            batteryColors[i], ratio
+                        )
+                    } else {
+                        batteryColors[i]
+                    }
+                    break
+                }
+            }
+            paint.color = singleColor
+        } else {
+            val shader = SweepGradient(
+                cx,
+                cy,
+                shadeColors,
+                shadeLevels,
+            )
+            val shaderMatrix = Matrix()
+            shaderMatrix.preRotate(270f, cx, cy)
+            shader.setLocalMatrix(shaderMatrix)
+            paint.shader = shader
+            //			paint.setAlpha(128);
+        }
     }
+
+    private fun refreshShadeColors() {
+        if (batteryColors == null) return
+        shadeColors =
+            IntArray(batteryLevels.size * 2 + 2)
+        shadeLevels =
+            FloatArray(shadeColors.size)
+        var prev = 0f
+        for (i in batteryLevels.indices) {
+            val rangeLength = batteryLevels[i] - prev
+            shadeLevels[2 * i] = (prev + rangeLength * .3f) / 100
+            shadeColors[2 * i] = batteryColors[i]
+            shadeLevels[2 * i + 1] =
+                (batteryLevels[i] - rangeLength * .3f) / 100
+            shadeColors[2 * i + 1] = batteryColors[i]
+            prev = batteryLevels[i]
+        }
+        shadeLevels[shadeLevels.size - 2] =
+            (batteryLevels[batteryLevels.size - 1] + (100 - batteryLevels[batteryLevels.size - 1]) * .3f) / 100
+        shadeColors[shadeColors.size - 2] =
+            Color.GREEN
+        shadeLevels[shadeLevels.size - 1] =
+            1f
+        shadeColors[shadeColors.size - 1] =
+            Color.GREEN
+    }
+
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
         framePaint.colorFilter = colorFilter
         batteryPaint.colorFilter = colorFilter
         warningTextPaint.colorFilter = colorFilter
         boltPaint.colorFilter = colorFilter
-        plusPaint.colorFilter = colorFilter
     }
 
+    @Deprecated("Deprecated in Java",
+        ReplaceWith("PixelFormat.UNKNOWN", "android.graphics.PixelFormat")
+    )
     override fun getOpacity() = PixelFormat.UNKNOWN
 
     companion object {
+        private var shadeColors: IntArray = IntArray(0)
+        private var shadeLevels: FloatArray = FloatArray(0)
+        private var lastUpdate: Long = -1
+
         private fun loadPoints(
                 res: Resources,
                 pointArrayRes: Int
@@ -310,11 +380,6 @@ class CircleBatteryDrawable(
     init {
         val res = context.resources
 
-//        this.batteryLevels = batteryLevels
-//        this.batteryColors = batteryColors
-//        this.indicateCharging = indicateCharging
-//        this.indicateFastCharging = indicateFastCharging
-
         warningString = "!"//res.getString(R.string.battery_meter_very_low_overlay_symbol)
         criticalLevel = 5 /*res.getInteger(
                 com.android.internal.R.integer.config_criticalBatteryWarningLevel
@@ -332,19 +397,15 @@ class CircleBatteryDrawable(
         warningTextPaint.textAlign = Paint.Align.CENTER
 
 
-//        this.chargeColor = chargeColor
-//        this.fastChargeColor = fastChargeColor
         boltPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        boltPaint.color = chargeColor
         boltPoints =
                 loadPoints(res, res.getIdentifier("batterymeter_bolt_points", "array", context.packageName))// R.array.batterymeter_bolt_points)
-        plusPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        plusPaint.color = getColorStateListDefaultColor(
+        powerSaveColor = getColorStateListDefaultColor(
                 context,
                 res.getIdentifier("batterymeter_plus_color", "color", context.packageName)//R.color.batterymeter_plus_color
         )
         powerSavePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        powerSavePaint.color = plusPaint.color
+        powerSavePaint.color = powerSaveColor
         powerSavePaint.style = Paint.Style.STROKE
         intrinsicWidth = res.getDimensionPixelSize(res.getIdentifier("battery_height", "dimen", context.packageName))//R.dimen.battery_width)
         intrinsicHeight = res.getDimensionPixelSize(res.getIdentifier("battery_height", "dimen", context.packageName))//R.dimen.battery_height)

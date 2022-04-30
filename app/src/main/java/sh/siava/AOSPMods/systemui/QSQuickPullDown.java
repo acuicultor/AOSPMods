@@ -56,15 +56,12 @@ public class QSQuickPullDown implements IXposedModPack {
 
                         boolean prevResult = (boolean) param.getResult();
                         param.setResult(prevResult || showQsOverride);
-                        return;
                     }
                 });
     }
 
     @Override
-    public String getListenPack() {
-        return listenPackage;
-    }
+    public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
 
 
 }

@@ -43,7 +43,7 @@ public class NavBarResizer implements IXposedModPack {
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if(!lpparam.packageName.equals(listenPackage)) return;
 
-        Class NavigationBarInflaterViewClass = XposedHelpers.findClass("com.android.systemui.navigationbar.NavigationBarInflaterView", lpparam.classLoader);
+        Class<?> NavigationBarInflaterViewClass = XposedHelpers.findClass("com.android.systemui.navigationbar.NavigationBarInflaterView", lpparam.classLoader);
 
         XposedBridge.hookAllConstructors(NavigationBarInflaterViewClass, new XC_MethodHook() {
             @Override
@@ -70,9 +70,7 @@ public class NavBarResizer implements IXposedModPack {
     }
 
     @Override
-    public String getListenPack() {
-        return listenPackage;
-    }
+    public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
 
 
 }

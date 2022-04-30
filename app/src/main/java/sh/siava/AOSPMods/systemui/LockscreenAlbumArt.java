@@ -24,15 +24,13 @@ public class LockscreenAlbumArt implements IXposedModPack {
 	}
 	
 	@Override
-	public String getListenPack() {
-		return listenPackage;
-	}
+	public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
 	
 	@Override
 	public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
 		if(!lpparam.packageName.equals(listenPackage) || !albumArtLockScreenHookEnabled) return;
 		
-		Class NotificationMediaManagerClass = XposedHelpers.findClass("com.android.systemui.statusbar.NotificationMediaManager", lpparam.classLoader);
+		Class<?> NotificationMediaManagerClass = XposedHelpers.findClass("com.android.systemui.statusbar.NotificationMediaManager", lpparam.classLoader);
 		
 		XposedBridge.hookAllMethods(NotificationMediaManagerClass, "updateMediaMetaData", new XC_MethodHook() {
 			@Override

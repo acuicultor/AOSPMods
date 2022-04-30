@@ -64,15 +64,13 @@ public class BackGestureManager implements IXposedModPack {
                         if (mEdgeHeight != 0) {
                             if (y < (mDisplaySize.y - mBottomGestureHeight - mEdgeHeight)) {
                                 param.setResult(false);
-                                return;
                             }
                         }
                     }
                 });
     }
-
+    
     @Override
-    public String getListenPack() {
-        return listenPackage;
-    }
+    public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
+    
 }

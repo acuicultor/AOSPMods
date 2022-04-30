@@ -41,6 +41,7 @@
     <string name="assistant_shortcut">Assistant</string>
     <string name="album_art_category">Media options</string>
     <string name="album_art_title">Enable album art when playing media</string>
+    <string name="shufflePin_title">Shuffle Pin</string>
 
     <!--Status bar related-->
     <string name="double_tap_sleep_title">Double tap to sleep</string>
@@ -57,6 +58,7 @@
 
     <string name="lte_4g_icon_title">LTE / 4G Icon</string>
     <string name="combined_signal_icon_title">Combined signal icons</string>
+    <string name="volte_icon_title">Show VoLTE icon when available</string>
     <string name="sb_vibration_switch_title">Show Vibrate/Silent icons</string>
     <string name="sbc_position_title">Clock position</string>
     <string name="sbc_ampm_style">AM/PM Style</string>
@@ -190,6 +192,8 @@
     <string name="so_vol_longpress_skip">Long press Volume to skip music*</string>
     <string name="notifications_header">Notifications options</string>
     <string name="expand_notifications_icons_title">"Add expand/collapse all buttons</string>
+    <string name="disable_overscroll">"Disable elastic overscroll effect</string>
+    <string name="overscroll_on_summary">Important: you MUST enable the apps you want to disable overscroll for, in LSPosed</string>
 
     <!-- Theming section related -->
     <string name="gsans_override_title">Force Google Sans font system wide</string>
@@ -215,7 +219,7 @@
     <string name="pull_down_right">Right</string>
 
     <!-- Battery styles -->
-    <string name="battery_default">Default (requires restart to apply)</string>
+    <string name="battery_default">Default</string>
     <string name="battery_circle">Circle</string>
     <string name="battery_dashed_circle">Dashed Circle</string>
     <string name="battery_circle_filled">Filled Circle</string>

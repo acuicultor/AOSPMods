@@ -51,8 +51,10 @@ public class BatteryStyleManager implements IXposedModPack {
         BatteryStyleManager.isFastCharging = isFastCharging;
         for(Object view : batteryViews)
         {
-            BatteryDrawable drawable = (BatteryDrawable) XposedHelpers.getAdditionalInstanceField(view, "mBatteryDrawable");
-            drawable.setFastCharging(isFastCharging);
+            try {
+                BatteryDrawable drawable = (BatteryDrawable) XposedHelpers.getAdditionalInstanceField(view, "mBatteryDrawable");
+                drawable.setFastCharging(isFastCharging);
+            }catch(Throwable ignored){} //it's probably default battery. no action needed
         }
     }
     
@@ -62,20 +64,18 @@ public class BatteryStyleManager implements IXposedModPack {
         String BatteryStyleStr = XPrefs.Xprefs.getString("BatteryStyle", "0");
         scaleFactor = XPrefs.Xprefs.getInt("BatteryIconScaleFactor", 50)*2;
         int batteryStyle = Integer.parseInt(BatteryStyleStr);
-        
-        if(batteryStyle == 0)
-        {
-            customBatteryEnabled = false;
-            return;
-        }
+        customBatteryEnabled = batteryStyle != 0;
         if(batteryStyle == 99)
         {
             scaleFactor = 0;
         }
-        customBatteryEnabled = true;
-
+    
         if(BatteryStyle != batteryStyle)
         {
+            if(Key.length > 0 && batteryStyle == 0)
+            {
+                android.os.Process.killProcess(android.os.Process.myPid());
+            }
             BatteryStyle = batteryStyle;
             for(Object view : batteryViews) //distroy old drawables and make new ones :D
             {
@@ -88,7 +88,6 @@ public class BatteryStyleManager implements IXposedModPack {
                 int mLevel = (int) XposedHelpers.getObjectField(view, "mLevel");
                 newDrawable.setBatteryLevel(mLevel);
                 newDrawable.setCharging(mCharging);
-                newDrawable.refresh();
             }
         }
         
@@ -120,14 +119,15 @@ public class BatteryStyleManager implements IXposedModPack {
     }
     
     private static void refreshBatteryIcons() {
-        for(Object view : batteryViews)
-        {
+        for (Object view : batteryViews) {
             ImageView mBatteryIconView = (ImageView) XposedHelpers.getObjectField(view, "mBatteryIconView");
-            BatteryDrawable drawable = (BatteryDrawable) XposedHelpers.getAdditionalInstanceField(view, "mBatteryDrawable");
-            drawable.setShowPercent(ShowPercent);
             scale(mBatteryIconView);
-//            drawable.setAlpha(Math.round(BatteryIconOpacity*2.55f));
-            drawable.refresh();
+            try {
+                BatteryDrawable drawable = (BatteryDrawable) XposedHelpers.getAdditionalInstanceField(view, "mBatteryDrawable");
+                drawable.setShowPercent(ShowPercent);
+                drawable.setAlpha(Math.round(BatteryIconOpacity*2.55f));
+                drawable.refresh();
+            }catch(Throwable ignored){} //it's probably the default battery. no action needed
         }
     }
     
@@ -148,7 +148,7 @@ public class BatteryStyleManager implements IXposedModPack {
         {
             BatteryMeterViewClass = XposedHelpers.findClass("com.android.systemui.battery.BatteryMeterView", lpparam.classLoader);
         }
-
+    
         //Android 12 June beta
         Method updatePercentTextMethod = XposedHelpers.findMethodExactIfExists(BatteryMeterViewClass, "updatePercentText");
         if(updatePercentTextMethod != null) {
@@ -244,7 +244,6 @@ public class BatteryStyleManager implements IXposedModPack {
     }
     
     private BatteryDrawable getNewDrawable(Context context) {
-        XposedBridge.log("going for new");
         BatteryDrawable mBatteryDrawable = null;
         switch (BatteryStyle)
         {
@@ -258,10 +257,12 @@ public class BatteryStyleManager implements IXposedModPack {
             case 99:
                 mBatteryDrawable = new hiddenBatteryDrawable();
         }
-//        mBatteryDrawable.setAlpha(Math.round(2.55f*BatteryIconOpacity));
-        mBatteryDrawable.setShowPercent(ShowPercent);
-        mBatteryDrawable.setMeterStyle(BatteryStyle);
-        mBatteryDrawable.setFastCharging(isFastCharging);
+        if(mBatteryDrawable != null) {
+            mBatteryDrawable.setShowPercent(ShowPercent);
+            mBatteryDrawable.setMeterStyle(BatteryStyle);
+            mBatteryDrawable.setFastCharging(isFastCharging);
+            mBatteryDrawable.setAlpha(Math.round(BatteryIconOpacity * 2.55f));
+        }
         return mBatteryDrawable;
     }
     
@@ -319,8 +320,6 @@ public class BatteryStyleManager implements IXposedModPack {
     }
 
     @Override
-    public String getListenPack() {
-        return listenPackage;
-    }
+    public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
 
 }

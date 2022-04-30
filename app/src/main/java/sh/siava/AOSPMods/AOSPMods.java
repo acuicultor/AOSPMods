@@ -7,8 +7,10 @@ import java.util.ArrayList;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import sh.siava.AOSPMods.allApps.overScrollDisabler;
 import sh.siava.AOSPMods.android.screenOffKeys;
 import sh.siava.AOSPMods.launcher.TaskbarActivator;
 import sh.siava.AOSPMods.systemui.AOSPSettingsLauncher;
@@ -19,6 +21,7 @@ import sh.siava.AOSPMods.systemui.CarrierTextManager;
 import sh.siava.AOSPMods.systemui.DoubleTapSleepLS;
 import sh.siava.AOSPMods.systemui.DoubleTaptoWake;
 import sh.siava.AOSPMods.systemui.FeatureFlagsMods;
+import sh.siava.AOSPMods.systemui.KeyGuardPinScrambler;
 import sh.siava.AOSPMods.systemui.KeyguardBottomArea;
 import sh.siava.AOSPMods.systemui.LTEiconChange;
 import sh.siava.AOSPMods.systemui.LockscreenAlbumArt;
@@ -35,12 +38,14 @@ import sh.siava.AOSPMods.systemui.UDFPSManager;
 
 public class AOSPMods implements IXposedHookLoadPackage{
 
-    public static ArrayList<Class> modPacks = new ArrayList<>();
+    public static ArrayList<Class<?>> modPacks = new ArrayList<>();
     public static ArrayList<IXposedModPack> runningMods = new ArrayList<>();
     public Context mContext = null;
     public static boolean isSecondProcess = false;
+    
     public AOSPMods()
     {
+        //region Mod list definition
         modPacks.add(StatusbarMods.class);
         modPacks.add(BackGestureManager.class);
         modPacks.add(BackToKill.class);
@@ -65,7 +70,11 @@ public class AOSPMods implements IXposedHookLoadPackage{
         modPacks.add(NotificationExpander.class);
         modPacks.add(TaskbarActivator.class);
         modPacks.add(LockscreenAlbumArt.class);
+        modPacks.add(KeyGuardPinScrambler.class);
+        modPacks.add(overScrollDisabler.class);
+        //endregion
     }
+    
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         isSecondProcess =  lpparam.processName.contains(":");
@@ -79,11 +88,11 @@ public class AOSPMods implements IXposedHookLoadPackage{
             }
         });
  
-        for (Class mod : modPacks)
+        for (Class<?> mod : modPacks)
         {
             try {
                 IXposedModPack instance = ((IXposedModPack) mod.newInstance());
-                if(!instance.getListenPack().equals(lpparam.packageName)) continue;
+                if(!instance.listensTo(lpparam.packageName)) continue;
                 try {
                     instance.updatePrefs();
                 } catch(Throwable ignored){ }
@@ -99,6 +108,7 @@ public class AOSPMods implements IXposedHookLoadPackage{
 
     private void setContext(Context context) {
         mContext = context;
+        XposedBridge.log(mContext.getPackageName());
         XPrefs.loadPrefs(mContext);
     }
 }

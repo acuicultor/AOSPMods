@@ -171,28 +171,33 @@ public class SettingsActivity extends AppCompatActivity implements
         }
     
         private void updateVisibility(SharedPreferences prefs) {
-            String json = prefs.getString("batteryWarningRange", "");
-            boolean critZero = RangeBarHelper.getLowValueFromJsonString(json) == 0;
-            boolean warnZero = RangeBarHelper.getHighValueFromJsonString(json) == 0;
-            boolean bBarEnabled = prefs.getBoolean("BBarEnabled", false);
-            boolean isColorful = prefs.getBoolean("BBarColorful", false);
-            boolean transitColors = prefs.getBoolean("BBarTransitColors", false);
+            try {
+                String json = prefs.getString("batteryWarningRange", "");
+                boolean critZero = RangeBarHelper.getLowValueFromJsonString(json) == 0;
+                boolean warnZero = RangeBarHelper.getHighValueFromJsonString(json) == 0;
+                boolean bBarEnabled = prefs.getBoolean("BBarEnabled", false);
+                boolean isColorful = prefs.getBoolean("BBarColorful", false);
+                boolean transitColors = prefs.getBoolean("BBarTransitColors", false);
     
-            findPreference("batteryFastChargingColor").setVisible(prefs.getBoolean("indicateFastCharging", false) && bBarEnabled);
-            findPreference("batteryChargingColor").setVisible(prefs.getBoolean("indicateCharging", false) && bBarEnabled);
-            findPreference("batteryWarningColor").setVisible(!warnZero && bBarEnabled);
-            findPreference("batteryCriticalColor").setVisible((!critZero || transitColors) && bBarEnabled && findPreference("batteryWarningColor").isVisible());
+                findPreference("batteryFastChargingColor").setVisible(prefs.getBoolean("indicateFastCharging", false) && bBarEnabled);
+                findPreference("batteryChargingColor").setVisible(prefs.getBoolean("indicateCharging", false) && bBarEnabled);
+                findPreference("batteryWarningColor").setVisible(!warnZero && bBarEnabled);
+                findPreference("batteryCriticalColor").setVisible((!critZero || transitColors) && bBarEnabled && findPreference("batteryWarningColor").isVisible());
     
-            findPreference("BBarTransitColors").setVisible(bBarEnabled && !isColorful);
-            findPreference("BBOnlyWhileCharging").setVisible(bBarEnabled);
-            findPreference("BBOnBottom").setVisible(bBarEnabled);
-            findPreference("BBarColorful").setVisible(bBarEnabled);
-            findPreference("BBOpacity").setVisible(bBarEnabled);
-            findPreference("BBarHeight").setVisible(bBarEnabled);
-            findPreference("BBSetCentered").setVisible(bBarEnabled);
-            findPreference("indicateCharging").setVisible(bBarEnabled);
-            findPreference("indicateFastCharging").setVisible(bBarEnabled);
-            findPreference("batteryWarningRange").setVisible(bBarEnabled);
+                findPreference("BBarTransitColors").setVisible(bBarEnabled && !isColorful);
+                findPreference("BBOnlyWhileCharging").setVisible(bBarEnabled);
+                findPreference("BBOnBottom").setVisible(bBarEnabled);
+                findPreference("BBarColorful").setVisible(bBarEnabled);
+                findPreference("BBOpacity").setVisible(bBarEnabled);
+                findPreference("BBOpacity").setSummary(prefs.getInt("BBOpacity", 100) + "%");
+                findPreference("BBarHeight").setVisible(bBarEnabled);
+                findPreference("BBarHeight").setSummary(prefs.getInt("BBarHeight", 50) + "%");
+                findPreference("BBSetCentered").setVisible(bBarEnabled);
+                findPreference("indicateCharging").setVisible(bBarEnabled);
+                findPreference("indicateFastCharging").setVisible(bBarEnabled);
+                findPreference("batteryWarningRange").setVisible(bBarEnabled);
+            }
+            catch(Exception ignored){}
         }
     
     }
@@ -217,17 +222,19 @@ public class SettingsActivity extends AppCompatActivity implements
             boolean warnZero = RangeBarHelper.getHighValueFromJsonString(json) == 0;
             boolean colorful = prefs.getBoolean("BIconColorful", false);
             findPreference("DualToneBatteryOverlay").setVisible(style==0);
+            findPreference("BIconOpacity").setVisible(style>0 && style<99);
+            findPreference("BIconOpacity").setSummary(prefs.getInt("BIconOpacity", 100) + "%");
             findPreference("BatteryIconScaleFactor").setVisible(style<99);
             findPreference("BatteryShowPercent").setVisible(style == 1 || style == 2);
-            findPreference("BIconindicateCharging").setVisible(style==3);
-            findPreference("batteryIconChargingColor").setVisible(style==3 && prefs.getBoolean("BIconindicateCharging", false));
-            findPreference("BIconindicateFastCharging").setVisible(style==3);
-            findPreference("batteryIconFastChargingColor").setVisible(style==3 && prefs.getBoolean("BIconindicateFastCharging", false));
-            findPreference("BIconColorful").setVisible(style==3 && !prefs.getBoolean("BIconTransitColors", false));
-            findPreference("BIconTransitColors").setVisible(style==3 && !prefs.getBoolean("BIconColorful", false));
-            findPreference("BIconbatteryWarningRange").setVisible(style==3);
-            findPreference("BIconbatteryCriticalColor").setVisible(style==3 && (colorful || !critZero));
-            findPreference("BIconbatteryWarningColor").setVisible(style==3 && (colorful || !warnZero));
+            findPreference("BIconindicateCharging").setVisible(style == 3);
+            findPreference("batteryIconChargingColor").setVisible(style == 3 && prefs.getBoolean("BIconindicateCharging", false));
+            findPreference("BIconindicateFastCharging").setVisible(style>0 && style<99);
+            findPreference("batteryIconFastChargingColor").setVisible(style>0 && style<99 && prefs.getBoolean("BIconindicateFastCharging", false));
+            findPreference("BIconColorful").setVisible(style>0 && style<99 && !prefs.getBoolean("BIconTransitColors", false));
+            findPreference("BIconTransitColors").setVisible(style>0 && style<99 && !prefs.getBoolean("BIconColorful", false));
+            findPreference("BIconbatteryWarningRange").setVisible(style>0 && style<99);
+            findPreference("BIconbatteryCriticalColor").setVisible(style>0 && style<99 && (colorful || !critZero));
+            findPreference("BIconbatteryWarningColor").setVisible(style>0 && style<99 && (colorful || !warnZero));
         }
     
         SharedPreferences.OnSharedPreferenceChangeListener listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
