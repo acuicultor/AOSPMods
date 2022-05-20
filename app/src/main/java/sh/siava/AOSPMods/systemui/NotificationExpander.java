@@ -13,23 +13,24 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.R;
 import sh.siava.AOSPMods.XPrefs;
 
-public class NotificationExpander implements IXposedModPack {
+public class NotificationExpander extends XposedModPack {
 	public static final String listenPackage = "com.android.systemui";
 	
 	public static boolean notificationExpandallHookEnabled = true;
 	public static boolean notificationExpandallEnabled = false;
 
 	private static Object NotificationEntryManager;
-	private Context mContext;
 	private Button ExpandBtn, CollapseBtn;
 	private FrameLayout FooterView;
 	private FrameLayout BtnLayout;
 	private static int fh = 0;
 	private Object Scroller;
+	
+	public NotificationExpander(Context context) { super(context); }
 	
 	@Override
 	public void updatePrefs(String... Key) {
@@ -59,7 +60,6 @@ public class NotificationExpander implements IXposedModPack {
 			@Override
 			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 				FooterView = (FrameLayout) param.thisObject;
-				mContext = (Context) XposedHelpers.callMethod(param.thisObject, "getContext");
 				
 				BtnLayout = new FrameLayout(mContext);
 				FrameLayout.LayoutParams BtnFrameParams = new FrameLayout.LayoutParams(Math.round(fh*2.5f), fh);

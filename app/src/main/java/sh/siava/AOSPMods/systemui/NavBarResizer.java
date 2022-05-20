@@ -1,5 +1,6 @@
 package sh.siava.AOSPMods.systemui;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,16 +9,18 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class NavBarResizer implements IXposedModPack {
+public class NavBarResizer extends XposedModPack {
     public static final String listenPackage = "com.android.systemui";
     public static boolean isEnabled = false;
     public static float sizeFactor = 1f;
 
     private static Object mNavigationBarInflaterView = null;
-
+    
+    public NavBarResizer(Context context) { super(context); }
+    
     public void updatePrefs(String...Key)
     {
         if(XPrefs.Xprefs == null) return;

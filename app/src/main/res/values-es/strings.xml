@@ -39,9 +39,10 @@
     <string name="LSrightShortcutTitle">Acceso directo derecho</string>
     <string name="camera_shortcut">Cámara</string>
     <string name="assistant_shortcut">Asistente</string>
+	<string name="torch_shortcut">Linterna</string>
     <string name="album_art_category">Opciones de visualización de reproducción de música</string>
     <string name="album_art_title">Habilitar visualización de reproducción de música</string>
-	<string name="shufflePin_title">Pin Aleatorio</string>
+	<string name="shufflePin_title">Pin aleatorio</string>
 
     <!--Status bar related-->
     <string name="double_tap_sleep_title">Doble toque para bloquear pantalla</string>
@@ -54,11 +55,13 @@
     <string name="battery_icon_size_title">Tamaño del icono de batería</string> 
     <string name="battery_size_summary" translatable="false">@string/percent_of_default_size</string>
     <string name="battery_hidden">Oculta</string>
-	 <string name="BIcon_Opacity_title">Opacidad</string>
+	<string name="BIcon_Opacity_title">Opacidad</string>
+	<string name="sb_center_fine_tune">Afinar el área central</string>
 
     <string name="lte_4g_icon_title">Icono 4G / LTE</string>
     <string name="combined_signal_icon_title">Iconos de señal combinados</string>
     <string name="sb_vibration_switch_title">"Mostar los iconos vibrar/silencio"</string>
+	<string name="volte_icon_title">Mostrar icono VoLTE cuando este disponible</string>
     <string name="sbc_position_title">Posición del reloj</string>
     <string name="sbc_ampm_style">Estilo AM/PM</string>
     <string name="sbc_show_secs">Mostrar segundos</string>
@@ -71,14 +74,26 @@
     <string name="sbc_custom_date_after">Formato de fecha personalizado despues del reloj</string>
     <string name="sbc_header">Personalizar el reloj</string>
     <string name="sbc_may_take_one_minute">Requiere actualización de la hora o reinicio de la interfaz de usuario</string>
+	<string name="network_settings_pref">Configuración del monitor de red...</string>
     <string name="ntsb_far_left">Lado izquierdo</string>
     <string name="ntsb_mid_left">Mitad a la izquierda</string>
     <string name="ntsb_mid_right">Mitad a la derecha</string>
     <string name="ntsb_category_title">Tráfico de red</string>
     <string name="ntsb_enabled_title">Activar monitor de tráfico de red</string>
     <string name="ntsb_position_title">Localización del monitor</string>
-    <string name="ntsb_treshold_title">Ocultar automaticamente</string>
-    <string name="ntsb_treshold_summary">"Ocultar si el tráfico es menor a… (Kilobytes)"</string>
+    <string name="ntsb_threshold_title">Ocultar automaticamente</string>
+    <string name="ntsb_threshold_summary">"Ocultar si el tráfico es menor a… (Kilobytes)"</string>
+	<string name="network_mode_title">Estilo del monitor</string>
+    <string name="network_colorful_title">Hazlo colorido</string>
+    <string name="network_download_top">Velocidad de descarga arriba</string>
+    <string name="network_download_color_title">Color descarga</string>
+    <string name="network_upload_color_title">Color subida</string>
+    <string name="network_opacity_title">Opacidad</string>
+    <string name="network_interval_title">Intervalo de refresco (segundos)</string>
+    <string name="nt_mode_rxtx">Descarga &amp; Subida</string>
+    <string name="nt_mode_total">Descarga + subida (Combinado)</string>
+    <string name="nt_mode_rxonly">Solo descarga</string>
+    <string name="nt_mode_txonly">Solo subida</string>
     <string name="statusbar_general_options">Preferencias de barra de estado</string>
     <string name="dual_tone_battery_title">Activar icono de tono dual</string>
     <string name="dual_tone_battery_on_summary">Activado (solo en modo horizontal)</string>
@@ -129,6 +144,7 @@
     <string name="wifi_cell_off">Usar solo el atajo de Internet</string>
     <string name="QQS_brightness_category">Preferencias de la barra de brillo</string>
     <string name="QQS_brightness_title">Mostrar la barra de brillo en el panel de ajustes rápidos</string>
+	<string name="QQS_brightness_bottom_title">Mover barra de brillo a la parte de abajo</string>
     <string name="QS_brightness_disable_title">Ocultar la barra de brillo en el panel de ajustes rápidos</string>
     <string name="bs_thick_track">Usar una barra gruesa en la barra de brillo</string>
     <string name="quick_settings_tiles_category">Opciones de los botones de ajustes rápidos</string>
@@ -181,9 +197,13 @@
     <!--Miscellaneous section related-->
     <string name="screenshot_sound_disable_title">Desactivar sonido de captura de pantalla</string>
     <string name="so_power_longpress_torch_title">"Linterna manteniendo presionado el botón de encendido/apagado*"</string>
+	<string name="so_taptaptorch_title">Habilitar linterna con doble toque</string>
+    <string name="so_taptaptorch_summary">Hacer doble toque y mantener la pantalla de bloqueo presionada para encender la linterna</string>
+	
     <string name="framework_needed_caution_summary">Requiere activar Framework en Lsposed. USAR CON CUIDADO</string>   
     <string name="so_double_tap_wake_title">Doble toque para despertar pantalla</string>
     <string name="so_double_tap_wake_summary">Usar doble toque en vez de un toque para encender la pantalla</string>
+	<string name="so_tap_proximity_wake_title">No despertar al tocar cuando la pantalla este cubierta</string>
     <string name="doze_header">"Mientras la pantalla está apagada..."</string>
     <string name="custom_themed_icons_title">Iconos tematizados personalizados</string>
     <string name="custom_themed_icons_off">Iconos personalizados inactivos</string>
@@ -196,6 +216,7 @@
 
     <!-- Theming section related -->
     <string name="gsans_override_title">Forzar la fuente Google Sans en todo el sistema</string>
+	<string name="font_overlays_enable_title">Habilitar el uso de fuentes personalizadas</string>
     <string name="theme_customization_font_title">Fuente de título / cuerpo del texto</string>
     <string name="icons_style_title">Estilo de los iconos</string>
     <string name="icon_shapes_title">Forma de los iconos</string>

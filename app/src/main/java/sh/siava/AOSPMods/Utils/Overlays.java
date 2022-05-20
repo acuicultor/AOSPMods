@@ -1,10 +1,7 @@
 package sh.siava.AOSPMods.Utils;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-
-import androidx.preference.PreferenceManager;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -18,18 +15,18 @@ import sh.siava.AOSPMods.XPrefs;
 public class Overlays {
     public static Map<String, Object> Overlays = null;
     
+    private static Overlays instance = null;
     static SharedPreferences prefs = null; //we load prefs from different sources depending on if it's from Xposed or App
     Resources resources;
-    boolean fromApp = false;
     
     public void initOverlays() //If called from UI OR Xposed
     {
-        Overlays = new HashMap<>();
-        
         if(resources == null)
         { //so we're running from Xposed
             resources = XPrefs.modRes;
         }
+        
+        Overlays = new HashMap<>();
         
         fillOverlays(); //these are groups - to be loaded from resource arrays that end with "OverlayEx" or "OverlayG"
         
@@ -50,81 +47,96 @@ public class Overlays {
         Overlays.put("ColorizeNavbarOverlay", new overlayProp("com.android.systemui.overlay.colorpill", false));
         Overlays.put("ReduceKeyboardSpaceOverlay", new overlayProp("com.android.overlay.reducekeyboard", false));
         Overlays.put("BSThickTrackOverlay", new overlayProp("com.android.systemui.bstrack.overlay", false));
+
+        instance = this;
         
-        setAll();
-    }
-    
-    public void initOverlays(Context context) //If called from UI
-    {
-        prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        resources = context.getResources();
-        fromApp = true;
-        
-        initOverlays();
+        new overlayStartupThread().start();
     }
     
     private void fillOverlays() { //filling overlay list from resources, using a bit of reflection :D
         
         Class<R.array> c = R.array.class;
         Field[] fileds = c.getDeclaredFields();
-        
-        for(int i = 0; i< fileds.length; i++)
-        {
+    
+        for (Field filed : fileds) {
             try {
-                int resid = fileds[i].getInt(R.array.module_scope);
-                if(resources.getResourceName(resid).endsWith("OverlayEx") || resources.getResourceName(resid).endsWith("OverlayG"))
-                {
+                int resid = filed.getInt(R.array.module_scope);
+                if (resources.getResourceName(resid).endsWith("OverlayEx") || resources.getResourceName(resid).endsWith("OverlayG")) {
                     String[] overlayNames = resources.getStringArray(resid);
                     ArrayList<overlayProp> members = new ArrayList<>();
-                    for(int j = 0; j< overlayNames.length; j++)
-                    {
-                        members.add(new overlayProp(overlayNames[j], true));
+                    for (String overlayName : overlayNames) {
+                        members.add(new overlayProp(overlayName, true));
                     }
                     Overlays.put(resources.getResourceName(resid).replace("sh.siava.AOSPMods:array/", ""), new overlayGroup(resources.getResourceName(resid), members));
                 }
-            }catch(Exception e){}
+            } catch (Exception ignored) {}
         }
     }
     
     public static void setAll() //make sure settings are applied to device
     {
         if(AOSPMods.isSecondProcess) return;
-        
-        if(Overlays == null) new Overlays().initOverlays();
-        
-        if(prefs == null)
+    
+        if(instance == null)
         {
-            prefs = XPrefs.Xprefs;
+            new Overlays().initOverlays();
+            return;
         }
-        
-        if(prefs == null || Overlays == null) return; // something not ready
-        
-        Helpers.getActiveOverlays(); //update the real active overlay list
-        
-        Map<String, ?> allPrefs = prefs.getAll();
-        
-        for(String pref : allPrefs.keySet())
-        {
-            if(pref.endsWith("Overlay") && Overlays.containsKey(pref))
+        instance.setAllInternal();
+    }
+    
+    private void setAllInternal()
+    {
+        new Thread(() -> {
+            if(prefs == null)
             {
-                Helpers.setOverlay(pref, prefs.getBoolean(pref, false));
+                prefs = XPrefs.Xprefs;
             }
-            //overlay groups, like themes of select one
-            else if(pref.endsWith("OverlayEx") && Overlays.containsKey(pref))
+
+            if(prefs == null) return; // something not ready
+
+            Helpers.getActiveOverlays(); //update the real active overlay list
+
+            Map<String, ?> allPrefs = prefs.getAll();
+
+            for(String pref : allPrefs.keySet())
             {
-                String activeOverlay = prefs.getString(pref, "None");
-                
-                overlayGroup thisGroup = (overlayGroup) Overlays.get(pref);
-                for (overlayProp thisProp : thisGroup.members) {
-                    if(!thisProp.name.equals("None")) {
-                        Helpers.setOverlay(thisProp.name, activeOverlay.equals(thisProp.name));
+                if(pref.endsWith("Overlay") && Overlays.containsKey(pref))
+                {
+                    Helpers.setOverlay(pref, prefs.getBoolean(pref, false));
+                }
+                //overlay groups, like themes of select one
+                else if(pref.endsWith("OverlayEx") && Overlays.containsKey(pref))
+                {
+                    String activeOverlay = prefs.getString(pref, "None");
+        
+                    overlayGroup thisGroup = (overlayGroup) Overlays.get(pref);
+                    for (overlayProp thisProp : thisGroup.members) {
+                        if(!thisProp.name.equals("None")) {
+                            Helpers.setOverlay(thisProp.name, activeOverlay.equals(thisProp.name));
+                        }
                     }
                 }
+            }
+        }).start();
+    }
+    
+    class overlayStartupThread extends Thread {
+        @Override
+        public void run()
+        {
+            for(int i = 0; i < 2; i++)
+            {
+                setAllInternal();
+                try {
+                    Thread.sleep(20000);//wait some seconds in case any other mod plays with us at system startup, and apply again in background
+                } catch (Exception ignored) {}
             }
         }
     }
     
-    class overlayProp
+    
+    static class overlayProp
     {
         public String name;
         public boolean exclusive;
@@ -136,9 +148,9 @@ public class Overlays {
         }
     }
     
-    class overlayGroup
+    static class overlayGroup
     {
-        public overlayGroup(String name, ArrayList members)
+        public overlayGroup(String name, ArrayList<overlayProp> members)
         {
             this.name = name;
             this.members = members;

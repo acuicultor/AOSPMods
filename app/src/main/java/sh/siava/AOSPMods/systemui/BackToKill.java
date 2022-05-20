@@ -1,5 +1,6 @@
 package sh.siava.AOSPMods.systemui;
 
+import android.content.Context;
 import android.view.View;
 
 import com.topjohnwu.superuser.Shell;
@@ -7,13 +8,16 @@ import com.topjohnwu.superuser.Shell;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class BackToKill implements IXposedModPack {
+public class BackToKill extends XposedModPack {
     private static final String listenPackage = "com.android.systemui";
     private static boolean isEnabled = false;
-
+    
+    public BackToKill(Context context) { super(context); }
+    
+    @Override
     public void updatePrefs(String...Key)
     {
         if(XPrefs.Xprefs == null) return;
@@ -31,7 +35,7 @@ public class BackToKill implements IXposedModPack {
         View.OnLongClickListener listener = v -> {
             if(!isEnabled) return true;
 
-            Shell.su("am force-stop $(dumpsys window | grep mCurrentFocus | cut -d \"/\" -f1 | cut -d \" \" -f5)").submit();
+            Shell.cmd("am force-stop $(dumpsys window | grep mCurrentFocus | cut -d \"/\" -f1 | cut -d \" \" -f5)").submit();
 
             return true;
         };

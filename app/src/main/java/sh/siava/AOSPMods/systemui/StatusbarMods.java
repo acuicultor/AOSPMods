@@ -1,5 +1,6 @@
 package sh.siava.AOSPMods.systemui;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -11,7 +12,6 @@ import android.provider.AlarmClock;
 import android.provider.CalendarContract;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyCallback;
-import android.telephony.TelephonyManager;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.CharacterStyle;
@@ -31,6 +31,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Executor;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -38,15 +40,16 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import sh.siava.AOSPMods.BuildConfig;
-import sh.siava.AOSPMods.IXposedModPack;
 import sh.siava.AOSPMods.R;
-import sh.siava.AOSPMods.Utils.NetworkTrafficSB;
+import sh.siava.AOSPMods.Utils.SystemUtils;
+import sh.siava.AOSPMods.Utils.NetworkTraffic;
 import sh.siava.AOSPMods.Utils.batteryStyles.BatteryBarView;
 import sh.siava.AOSPMods.XPrefs;
+import sh.siava.AOSPMods.XposedModPack;
 
-@SuppressWarnings("RedundantThrows")
+@SuppressWarnings({"RedundantThrows", "ConstantConditions"})
 
-public class StatusbarMods implements IXposedModPack {
+public class StatusbarMods extends XposedModPack {
     private static final String listenPackage = "com.android.systemui";
 
     //region battery
@@ -74,10 +77,12 @@ public class StatusbarMods implements IXposedModPack {
     //endregion
 
     //region network traffic
+    private FrameLayout NTQSHolder = null;
     private static boolean networkOnSBEnabled = false;
+    private static boolean networkOnQSEnabled = false;
     private static int networkTrafficPosition = POSITION_LEFT;
-    private static int networkTrafficTreshold = 10;
-    private NetworkTrafficSB networkTrafficSB = null;
+    private NetworkTraffic networkTrafficSB = null;
+    private NetworkTraffic networkTrafficQS = null;
     //endregion
     
     //region battery bar
@@ -100,14 +105,18 @@ public class StatusbarMods implements IXposedModPack {
     //region general use
     private Object mActivityStarter;
     private Object KIC = null;
+    private Object QSBH = null;
     private View mStatusBar;
-    private Context mContext;
+
     private Object mCollapsedStatusBarFragment = null;
     private ViewGroup mClockParent = null;
+    private View mNotificationIconAreaInner = null;
     private View mCenteredIconArea = null;
     private LinearLayout mSystemIconArea = null;
     public static int clockColor = 0;
     private FrameLayout fullStatusbar;
+//    private Object STB = null;
+    private int centerAreaFineTune = 50;
     //endregion
     
     //region volte
@@ -121,10 +130,12 @@ public class StatusbarMods implements IXposedModPack {
     private Object mStatusBarIconController;
     private Class<?> StatusBarIcon;
     private Object volteStatusbarIcon;
-    private static TelephonyManager telephonyManager = null;
+    private boolean telephonyCallbackRegistered = false;
     private int lastVolteState = VOLTE_UNKNOWN;
     private final serverStateCallback volteCallback = new serverStateCallback();
     //endregion
+    
+    public StatusbarMods(Context context) { super(context); }
     
     @Override
     public boolean listensTo(String packageName) { return listenPackage.equals(packageName); }
@@ -132,6 +143,9 @@ public class StatusbarMods implements IXposedModPack {
     public void updatePrefs(String...Key)
     {
         if(XPrefs.Xprefs == null) return;
+        
+        centerAreaFineTune = XPrefs.Xprefs.getInt("centerAreaFineTune", 50);
+        tuneCenterArea();
         
         //region BatteryBar Settings
         BBarEnabled = XPrefs.Xprefs.getBoolean("BBarEnabled", false);
@@ -142,7 +156,7 @@ public class StatusbarMods implements IXposedModPack {
         BBOpacity = XPrefs.Xprefs.getInt("BBOpacity" , 100);
         BBarHeight = XPrefs.Xprefs.getInt("BBarHeight" , 50);
         BBarTransitColors = XPrefs.Xprefs.getBoolean("BBarTransitColors", false);
-    
+        
         String jsonString = XPrefs.Xprefs.getString("batteryWarningRange", "");
         if(jsonString.length() > 0)
         {
@@ -154,6 +168,7 @@ public class StatusbarMods implements IXposedModPack {
         batteryColors = new int[]{
                 XPrefs.Xprefs.getInt("batteryCriticalColor", Color.RED),
                 XPrefs.Xprefs.getInt("batteryWarningColor", Color.YELLOW)};
+        
     
         indicateFastCharging = XPrefs.Xprefs.getBoolean("indicateFastCharging", false);
         indicateCharging = XPrefs.Xprefs.getBoolean("indicateCharging", true);
@@ -172,34 +187,55 @@ public class StatusbarMods implements IXposedModPack {
         }
         //endregion BatteryBar Settings
         
+    
         //region network Traffic settings
-        boolean newnetworkOnSBEnabled = XPrefs.Xprefs.getBoolean("networkOnSBEnabled", false);
-        if(newnetworkOnSBEnabled != networkOnSBEnabled)
-        {
-            networkOnSBEnabled = newnetworkOnSBEnabled;
-            if(networkTrafficSB == null && mContext != null)
-            {
-                networkTrafficSB = new NetworkTrafficSB(mContext);
-            }
-            networkTrafficPosition = -1; //anyway we have to call placer method
-        }
-        int newnetworkTrafficPosition = Integer.parseInt(XPrefs.Xprefs.getString("networkTrafficPosition", "2"));
-        if(newnetworkTrafficPosition != networkTrafficPosition)
-        {
-            networkTrafficPosition = newnetworkTrafficPosition;
-            placeNTSB();
-        }
-        String tresholdText = XPrefs.Xprefs.getString("networkTrafficTreshold", "10");
+        networkOnSBEnabled = XPrefs.Xprefs.getBoolean("networkOnSBEnabled", false);
+        networkOnQSEnabled = XPrefs.Xprefs.getBoolean("networkOnQSEnabled", false);
+        String networkTrafficModeStr = XPrefs.Xprefs.getString("networkTrafficMode", "0");
+        int networkTrafficMode = Integer.parseInt(networkTrafficModeStr);
 
-        try {
-            networkTrafficTreshold = Math.round(Float.parseFloat(tresholdText));
+        boolean networkTrafficRXTop = XPrefs.Xprefs.getBoolean("networkTrafficRXTop", true);
+        int networkTrafficDLColor = XPrefs.Xprefs.getInt("networkTrafficDLColor", Color.GREEN);
+        int networkTrafficULColor = XPrefs.Xprefs.getInt("networkTrafficULColor", Color.RED);
+        int networkTrafficOpacity = XPrefs.Xprefs.getInt("networkTrafficOpacity", 100);
+        int networkTrafficInterval = XPrefs.Xprefs.getInt("networkTrafficInterval", 1);
+        boolean networkTrafficColorful = XPrefs.Xprefs.getBoolean("networkTrafficColorful", false);
+
+
+        if(networkOnSBEnabled || networkOnQSEnabled)
+        {
+            networkTrafficPosition = -1; //anyway we have to call placer method
+            int newnetworkTrafficPosition = Integer.parseInt(XPrefs.Xprefs.getString("networkTrafficPosition", "2"));
+
+            String thresholdText = XPrefs.Xprefs.getString("networkTrafficThreshold", "10");
+
+            int networkTrafficThreshold;
+            try {
+                networkTrafficThreshold = Math.round(Float.parseFloat(thresholdText));
+            }
+            catch (Exception e) {
+                networkTrafficThreshold = 10;
+            }
+            if(newnetworkTrafficPosition != networkTrafficPosition)
+            {
+                networkTrafficPosition = newnetworkTrafficPosition;
+            }
+            NetworkTraffic.setConstants(networkTrafficInterval, networkTrafficThreshold, networkTrafficMode, networkTrafficRXTop, networkTrafficColorful, networkTrafficDLColor, networkTrafficULColor, networkTrafficOpacity);
+
         }
-        catch (Exception e) {
-            networkTrafficTreshold = 10;
+        if(networkOnSBEnabled)
+        {
+            networkTrafficSB = NetworkTraffic.getInstance(mContext, true);
+            networkTrafficSB.update();
         }
-        finally {
-            NetworkTrafficSB.setHideTreshold(networkTrafficTreshold);
+        if(networkOnQSEnabled)
+        {
+            networkTrafficQS = NetworkTraffic.getInstance(mContext, false);
+            networkTrafficQS.update();
         }
+        placeNTSB();
+        placeNTQS();
+
         //endregion network settings
 
         //region vibration settings
@@ -210,16 +246,19 @@ public class StatusbarMods implements IXposedModPack {
             setShowVibrationIcon();
         }
         //endregion
+        
 
         //region clock settings
         clockPosition = Integer.parseInt(XPrefs.Xprefs.getString("SBClockLoc", String.valueOf(POSITION_LEFT)));
         mShowSeconds = XPrefs.Xprefs.getBoolean("SBCShowSeconds", false);
         mAmPmStyle = Integer.parseInt(XPrefs.Xprefs.getString("SBCAmPmStyle", String.valueOf(AM_PM_STYLE_GONE)));
+        
 
         mDateFormatBefore = XPrefs.Xprefs.getString("DateFormatBeforeSBC", "");
         mDateFormatAfter = XPrefs.Xprefs.getString("DateFormatAfterSBC", "");
         mBeforeSmall = XPrefs.Xprefs.getBoolean("BeforeSBCSmall", true);
         mAfterSmall = XPrefs.Xprefs.getBoolean("AfterSBCSmall", true);
+        
 
         if((mDateFormatBefore+mDateFormatAfter).trim().length() == 0) {
             int SBCDayOfWeekMode = Integer.parseInt(XPrefs.Xprefs.getString("SBCDayOfWeekMode", "0"));
@@ -252,29 +291,62 @@ public class StatusbarMods implements IXposedModPack {
             }
         }
         //endregion clock settings
+        
     
         //region volte
         VolteIconEnabled = XPrefs.Xprefs.getBoolean("VolteIconEnabled", false);
         if(VolteIconEnabled)
-            initVolte(mContext);
+            initVolte();
         else
             removeVolte();
         //endregion
+        
     }
+
+    private void placeNTQS() {
+        if(networkTrafficQS == null)
+        {
+            return;
+        }
+        try
+        {
+            ((ViewGroup) networkTrafficQS.getParent()).removeView(networkTrafficQS);
+        }
+        catch(Throwable ignored){}
+        if(!networkOnQSEnabled) return;
+
+        try {
+            NTQSHolder.addView(networkTrafficQS);
+        }
+        catch (Throwable ignored){}
+    }
+
+    //region general
+    private void tuneCenterArea() {
+        try {
+            int screenWidth = fullStatusbar.getMeasuredWidth();
+            int notificationWidth = (screenWidth * centerAreaFineTune / 100);
+            ((ViewGroup) mNotificationIconAreaInner.getParent().getParent().getParent()).getLayoutParams().width = notificationWidth;
+            mSystemIconArea.getLayoutParams().width = screenWidth - notificationWidth;
+        } catch (Exception ignored) { }
+    }
+    //endregion
     
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if(!lpparam.packageName.equals(listenPackage)) return;
         
+
         //region needed classes
         Class<?> ActivityStarterClass = XposedHelpers.findClass("com.android.systemui.plugins.ActivityStarter", lpparam.classLoader);
         Class<?> DependencyClass = XposedHelpers.findClass("com.android.systemui.Dependency", lpparam.classLoader);
         Class<?> CollapsedStatusBarFragmentClass;
+        Class<?> UtilsClass = XposedHelpers.findClass("com.android.settingslib.Utils", lpparam.classLoader);
         Class<?> KeyguardStatusBarViewControllerClass = XposedHelpers.findClass("com.android.systemui.statusbar.phone.KeyguardStatusBarViewController", lpparam.classLoader);
         Class<?> QuickStatusBarHeaderControllerClass = XposedHelpers.findClass("com.android.systemui.qs.QuickStatusBarHeaderController", lpparam.classLoader);
         Class<?> QuickStatusBarHeaderClass = XposedHelpers.findClass("com.android.systemui.qs.QuickStatusBarHeader", lpparam.classLoader);
         Class<?> ClockClass = XposedHelpers.findClass("com.android.systemui.statusbar.policy.Clock", lpparam.classLoader);
-//        Class<?> PhoneStatusBarViewClass = XposedHelpers.findClass("com.android.systemui.statusbar.phone.PhoneStatusBarView", lpparam.classLoader);
+        Class<?> PhoneStatusBarViewClass = XposedHelpers.findClass("com.android.systemui.statusbar.phone.PhoneStatusBarView", lpparam.classLoader);
         Class<?> KeyGuardIndicationClass = XposedHelpers.findClass("com.android.systemui.statusbar.KeyguardIndicationController", lpparam.classLoader);
         Class<?> BatteryTrackerClass = XposedHelpers.findClass("com.android.systemui.statusbar.KeyguardIndicationController$BaseKeyguardCallback", lpparam.classLoader);
         StatusBarIcon = XposedHelpers.findClass("com.android.internal.statusbar.StatusBarIcon", lpparam.classLoader);
@@ -320,8 +392,8 @@ public class StatusbarMods implements IXposedModPack {
                 mCollapsedStatusBarFragment = param.thisObject;
             }
         });
-/*
-        //getting statusbarview for further use
+
+/*        //getting statusbarview for further use
         XposedBridge.hookAllConstructors(PhoneStatusBarViewClass, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -329,11 +401,35 @@ public class StatusbarMods implements IXposedModPack {
             }
         });*/
         
+        //update statusbar
+        XposedBridge.hookAllMethods(PhoneStatusBarViewClass, "onConfigurationChanged", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                new Timer().schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        tuneCenterArea();
+                        if(BatteryBarView.hasInstance())
+                        {
+                            BatteryBarView.getInstance().post(() -> refreshBatteryBar(BatteryBarView.getInstance()));
+                        }
+                    }
+                }, 200);
+            }
+        });
+        
         //getting activitity starter for further use
         XposedBridge.hookAllConstructors(QuickStatusBarHeaderClass, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                QSBH = param.thisObject;
+                NTQSHolder = new FrameLayout(mContext);
+                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.gravity = Gravity.CENTER_HORIZONTAL;
+                NTQSHolder.setLayoutParams(lp);
+                ((FrameLayout)QSBH).addView(NTQSHolder);
                 mActivityStarter = XposedHelpers.callStaticMethod(DependencyClass, "get", ActivityStarterClass);
+                placeNTQS();
             }
         });
 
@@ -360,7 +456,6 @@ public class StatusbarMods implements IXposedModPack {
 
                         ClickListener clickListener = new ClickListener(param.thisObject);
 
-
                         try {
                             XposedHelpers.callMethod(mBatteryRemainingIcon, "setOnClickListener", clickListener);
                             XposedHelpers.callMethod(mClockView, "setOnClickListener", clickListener);
@@ -382,7 +477,7 @@ public class StatusbarMods implements IXposedModPack {
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 //Removing vibration icon from blocked icons in lockscreen
                 if(showVibrationIcon && (XposedHelpers.findFieldIfExists(KeyguardStatusBarViewControllerClass, "mBlockedIcons") != null)) { //Android 12 doesn't have such thing at all
-                    List<String> OldmBlockedIcons = (List<String>) XposedHelpers.getObjectField(param.thisObject, "mBlockedIcons");
+                    @SuppressWarnings("unchecked") List<String> OldmBlockedIcons = (List<String>) XposedHelpers.getObjectField(param.thisObject, "mBlockedIcons");
 
                     List<String> NewmBlockedIcons = new ArrayList<>();
                     for (String item : OldmBlockedIcons) {
@@ -431,18 +526,35 @@ public class StatusbarMods implements IXposedModPack {
                 "onViewCreated", View.class, Bundle.class, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        mContext = (Context) XposedHelpers.callMethod(param.thisObject, "getContext");
+
                         mStatusBarIconController = XposedHelpers.getObjectField(param.thisObject, "mStatusBarIconController");
                         
-                        //View mNotificationIconAreaInner = (View) XposedHelpers.getObjectField(param.thisObject, "mNotificationIconAreaInner");
-                        View mClockView = (View) XposedHelpers.getObjectField(param.thisObject, "mClockView");
+                        mNotificationIconAreaInner = (View) XposedHelpers.getObjectField(param.thisObject, "mNotificationIconAreaInner");
+                        
+                        View mClockView;
+                        try
+                        {
+                            mClockView = (View) XposedHelpers.getObjectField(param.thisObject, "mClockView");
+                        }
+                        catch (Throwable t)
+                        { //PE Plus
+                            
+                            Object mClockController = XposedHelpers.getObjectField(param.thisObject, "mClockController");
+                            mClockView = (View) XposedHelpers.callMethod(mClockController, "getClock");
+                        }
+                        
+    
                         mClockParent = (ViewGroup) mClockView.getParent();
+                        
+    
                         mCenteredIconArea = (View) XposedHelpers.getObjectField(param.thisObject, "mCenteredIconArea");
                         mSystemIconArea = (LinearLayout) XposedHelpers.getObjectField(param.thisObject, "mSystemIconArea");
     
                         mStatusBar = (View) XposedHelpers.getObjectField(mCollapsedStatusBarFragment, "mStatusBar");
                         fullStatusbar = (FrameLayout) mStatusBar.getParent();
-                        
+
+                        tuneCenterArea();
+
                         if(BBarEnabled) //in case we got the config but view wasn't ready yet
                         {
                             placeBatteryBar();
@@ -450,28 +562,30 @@ public class StatusbarMods implements IXposedModPack {
                         
                         if(VolteIconEnabled) //in case we got the config but context wasn't ready yet
                         {
-                            initVolte(mContext);
+                            initVolte();
                         }
                         
                         if(networkOnSBEnabled)
                         {
-                            networkTrafficSB = (networkTrafficSB == null) ? new NetworkTrafficSB(mContext) : networkTrafficSB;
-                            NetworkTrafficSB.setHideTreshold(networkTrafficTreshold);
+                            networkTrafficSB = NetworkTraffic.getInstance(mContext, true);
                             placeNTSB();
                         }
-                        
+    
                         //<Showing vibration icon in collapsed statusbar>
                         if(showVibrationIcon) {
                             setShowVibrationIcon();
                         }
                         //</Showing vibration icon in collapsed statusbar>
+                        
 
                         //<modding clock>
                         XposedHelpers.setAdditionalInstanceField(mClockView, "mClockParent", 1);
-
+                        
+                        
                         if(clockPosition == POSITION_LEFT) return;
 
                         ViewGroup targetArea = null;
+                        
 
                         switch (clockPosition)
                         {
@@ -486,6 +600,8 @@ public class StatusbarMods implements IXposedModPack {
                         mClockParent.removeView(mClockView);
                         targetArea.addView(mClockView);
                         
+    
+    
                     }
                 });
 
@@ -521,6 +637,18 @@ public class StatusbarMods implements IXposedModPack {
                         param.setResult(result);
                     }
                 });
+
+        //Getting QS text color for Network traffic
+        XposedBridge.hookAllMethods(QuickStatusBarHeaderClass,
+                "onAttach", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        int fillColor = (int) XposedHelpers.callStaticMethod(UtilsClass, "getColorAttrDefaultColor",
+                                mContext,
+                                mContext.getResources().getIdentifier("@android:attr/textColorPrimary", "attr", mContext.getPackageName()));
+                        NetworkTraffic.setTintColor(fillColor, false);
+                    }
+                });
     
         //using clock colors for network traffic and battery bar
         XposedBridge.hookAllMethods(ClockClass,
@@ -536,7 +664,7 @@ public class StatusbarMods implements IXposedModPack {
                         if(mClockParent > 1) return; //We don't want colors of QS header. only statusbar
 
                         clockColor = ((TextView) param.thisObject).getTextColors().getDefaultColor();
-                        NetworkTrafficSB.setTint(clockColor);
+                        NetworkTraffic.setTintColor(clockColor, true);
                         if(BatteryBarView.hasInstance())
                         {
                             refreshBatteryBar(BatteryBarView.getInstance());
@@ -561,20 +689,22 @@ public class StatusbarMods implements IXposedModPack {
     
     private void placeBatteryBar() {
         try {
-            fullStatusbar.addView(BatteryBarView.getInstance(fullStatusbar.getContext()));
+            fullStatusbar.addView(BatteryBarView.getInstance(mContext));
             refreshBatteryBar(BatteryBarView.getInstance());
         }catch(Throwable ignored){}
     }
     //endregion
     
     //region volte related
-    private void initVolte(Context context) {
+    private void initVolte() {
+        
         try {
-            if (telephonyManager == null) {
+            if (!telephonyCallbackRegistered) {
                 Icon volteIcon = Icon.createWithResource(BuildConfig.APPLICATION_ID, R.drawable.ic_volte);
+                //noinspection JavaReflectionMemberAccess
                 volteStatusbarIcon = StatusBarIcon.getDeclaredConstructor(UserHandle.class, String.class, Icon.class, int.class, int.class, CharSequence.class).newInstance(UserHandle.class.getDeclaredConstructor(int.class).newInstance(0), BuildConfig.APPLICATION_ID, volteIcon, 0, 0, "volte");
-                telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-                telephonyManager.registerTelephonyCallback(volteExec, volteCallback);
+                SystemUtils.TelephonyManager().registerTelephonyCallback(volteExec, volteCallback);
+                telephonyCallbackRegistered = true;
             }
         }catch(Exception ignored){}
     }
@@ -582,8 +712,8 @@ public class StatusbarMods implements IXposedModPack {
     private void removeVolte() {
         try
         {
-            telephonyManager.unregisterTelephonyCallback(volteCallback);
-            telephonyManager = null;
+            SystemUtils.TelephonyManager().unregisterTelephonyCallback(volteCallback);
+            telephonyCallbackRegistered = false;
         }catch(Exception ignored){}
         removeVolteIcon();
     }
@@ -598,7 +728,7 @@ public class StatusbarMods implements IXposedModPack {
     
     private void updateVolte()
     {
-        int newVolteState = (Boolean) XposedHelpers.callMethod(telephonyManager, "isVolteAvailable") ? VOLTE_AVAILABLE : VOLTE_NOT_AVAILABLE;
+        int newVolteState = (Boolean) XposedHelpers.callMethod(SystemUtils.TelephonyManager(), "isVolteAvailable") ? VOLTE_AVAILABLE : VOLTE_NOT_AVAILABLE;
         if(lastVolteState != newVolteState)
         {
             lastVolteState = newVolteState;
@@ -619,6 +749,7 @@ public class StatusbarMods implements IXposedModPack {
     }
     
     private void removeVolteIcon() {
+        if(mStatusBar == null) return; //probably it's too soon to have a statusbar
         mStatusBar.post(() -> {
             try {
                 XposedHelpers.callMethod(mStatusBarIconController, "removeIcon", "volte");
@@ -631,7 +762,7 @@ public class StatusbarMods implements IXposedModPack {
     private void setShowVibrationIcon()
     {
         try {
-            List<String> mBlockedIcons = (List<String>) XposedHelpers.getObjectField(mCollapsedStatusBarFragment, "mBlockedIcons");
+            @SuppressWarnings("unchecked") List<String> mBlockedIcons = (List<String>) XposedHelpers.getObjectField(mCollapsedStatusBarFragment, "mBlockedIcons");
             Object mStatusBarIconController = XposedHelpers.getObjectField(mCollapsedStatusBarFragment, "mStatusBarIconController");
             Object mDarkIconManager = XposedHelpers.getObjectField(mCollapsedStatusBarFragment, "mDarkIconManager");
 
@@ -660,25 +791,22 @@ public class StatusbarMods implements IXposedModPack {
         if(!networkOnSBEnabled) return;
 
         try {
-            LinearLayout.LayoutParams ntsbLayoutP;
-            
+            FrameLayout.LayoutParams ntsbLayoutP;
             switch (networkTrafficPosition) {
                 case POSITION_RIGHT:
                     mSystemIconArea.addView(networkTrafficSB, 0);
-                    networkTrafficSB.setPadding(40, 0, 5, 0);
                     break;
                 case POSITION_LEFT:
                     mClockParent.addView(networkTrafficSB, 0);
-                    networkTrafficSB.setPadding(0, 0, 10, 0);
                     break;
                 case POSITION_CENTER:
                     mClockParent.addView(networkTrafficSB);
-                    networkTrafficSB.setPadding(0, 0, 0, 0);
                     break;
             }
-            ntsbLayoutP = (LinearLayout.LayoutParams) networkTrafficSB.getLayoutParams();
+            ntsbLayoutP = (FrameLayout.LayoutParams) networkTrafficSB.getLayoutParams();
             ntsbLayoutP.gravity = Gravity.CENTER_VERTICAL;
             networkTrafficSB.setLayoutParams(ntsbLayoutP);
+            networkTrafficSB.setPadding(10, 0, 10, 0);
         }catch(Throwable ignored){}
     }
     //endregion
@@ -711,7 +839,7 @@ public class StatusbarMods implements IXposedModPack {
             {
                 Uri.Builder builder = CalendarContract.CONTENT_URI.buildUpon();
                 builder.appendPath("time");
-                builder.appendPath(Long.toString(System.currentTimeMillis()));
+                builder.appendPath(Long.toString(java.lang.System.currentTimeMillis()));
                 Intent todayIntent = new Intent(Intent.ACTION_VIEW, builder.build());
                 XposedHelpers.callMethod(mActivityStarter, "postStartActivityDismissingKeyguard", todayIntent,0);
             }
@@ -743,7 +871,7 @@ public class StatusbarMods implements IXposedModPack {
         try {
 
             //There's some format to work on
-            SimpleDateFormat df = new SimpleDateFormat(dateFormat);
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat df = new SimpleDateFormat(dateFormat);
             String result = df.format(calendar.getTime());
             if (!small) return result;
 

@@ -1,14 +1,18 @@
 package sh.siava.AOSPMods.allApps;
 
+import android.content.Context;
+
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class overScrollDisabler implements IXposedModPack {
+public class overScrollDisabler extends XposedModPack {
 	private static boolean disableOverScroll = false;
+	
+	public overScrollDisabler(Context context) { super(context); }
 	
 	@Override
 	public void updatePrefs(String... Key) {

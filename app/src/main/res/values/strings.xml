@@ -39,6 +39,7 @@
     <string name="LSrightShortcutTitle">Right shortcut</string>
     <string name="camera_shortcut">Camera</string>
     <string name="assistant_shortcut">Assistant</string>
+    <string name="torch_shortcut">Flashlight</string>
     <string name="album_art_category">Media options</string>
     <string name="album_art_title">Enable album art when playing media</string>
     <string name="shufflePin_title">Shuffle Pin</string>
@@ -55,6 +56,7 @@
     <string name="battery_size_summary" translatable="false">@string/percent_of_default_size</string>
     <string name="battery_hidden">Hidden</string>
     <string name="BIcon_Opacity_title">Opacity</string>
+    <string name="sb_center_fine_tune">Fine-tune center area</string>
 
     <string name="lte_4g_icon_title">LTE / 4G Icon</string>
     <string name="combined_signal_icon_title">Combined signal icons</string>
@@ -72,14 +74,26 @@
     <string name="sbc_custom_date_after">Custom date format after clock</string>
     <string name="sbc_header">Status bar clock customization</string>
     <string name="sbc_may_take_one_minute">Takes effect on time update or SysUI restart</string>
+    <string name="network_settings_pref">Network monitor settings...</string>
     <string name="ntsb_far_left">Far Left</string>
     <string name="ntsb_mid_left">Mid-Left</string>
     <string name="ntsb_mid_right">Mid-Right</string>
     <string name="ntsb_category_title">Network Monitor</string>
     <string name="ntsb_enabled_title">Enable network monitor</string>
     <string name="ntsb_position_title">Monitor Position</string>
-    <string name="ntsb_treshold_title">Auto-hide treshold</string>
-    <string name="ntsb_treshold_summary">"Hide if traffic is less than… (Kilobytes)"</string>
+    <string name="ntsb_threshold_title">Auto-hide threshold</string>
+    <string name="ntsb_threshold_summary">"Hide if traffic is less than… (Kilobytes)"</string>
+    <string name="network_mode_title">Monitor style</string>
+    <string name="network_colorful_title">Make it colorful</string>
+    <string name="network_download_top">Download speed on top</string>
+    <string name="network_download_color_title">Download color</string>
+    <string name="network_upload_color_title">Upload color</string>
+    <string name="network_opacity_title">Opacity</string>
+    <string name="network_interval_title">Refresh interval (seconds)</string>
+    <string name="nt_mode_rxtx">Download &amp; Upload</string>
+    <string name="nt_mode_total">Downlaod + Upload (Combined)</string>
+    <string name="nt_mode_rxonly">Download only</string>
+    <string name="nt_mode_txonly">Upload only</string>
     <string name="statusbar_general_options">Status Bar Options</string>
     <string name="dual_tone_battery_title">Enable dual tone battery meter</string>
     <string name="dual_tone_battery_on_summary">On (only works with portrait icon)</string>
@@ -130,6 +144,7 @@
     <string name="wifi_cell_off">Use single Internet Tile</string>
     <string name="QQS_brightness_category">Brightness slider options</string>
     <string name="QQS_brightness_title">Show brightness slider on QQS Panel</string>
+    <string name="QQS_brightness_bottom_title">Move brightness slider to the bottom</string>
     <string name="QS_brightness_disable_title">Hide brightness slider from Quick Settings</string>
     <string name="bs_thick_track">Use a thick track on brightness slider</string>
     <string name="quick_settings_tiles_category">QS Tiles Options</string>
@@ -182,9 +197,13 @@
     <!--Miscellaneous section related-->
     <string name="screenshot_sound_disable_title">Disable screenshot sound</string>
     <string name="so_power_longpress_torch_title">Long press Power to torch*</string>
+    <string name="so_taptaptorch_title">Enable Double-tap Torch</string>
+    <string name="so_taptaptorch_summary">Double tap then hold lockscreen for quick torch</string>
+
     <string name="framework_needed_caution_summary">Requires activation of System Framework in Lsposed. USE WITH CAUTION</string>
     <string name="so_double_tap_wake_title">Double-tap to wake phone</string>
     <string name="so_double_tap_wake_summary">Disables single-tap to wake</string>
+    <string name="so_tap_proximity_wake_title">Don\'t wake on touch when screen covered</string>
     <string name="doze_header">While screen is off…</string>
     <string name="custom_themed_icons_title">Custom themed icons</string>
     <string name="custom_themed_icons_off">Custom icons disabled</string>
@@ -197,6 +216,7 @@
 
     <!-- Theming section related -->
     <string name="gsans_override_title">Force Google Sans font system wide</string>
+    <string name="font_overlays_enable_title">Enable using custom fonts</string>
     <string name="theme_customization_font_title">Headline / Body font</string>
     <string name="icons_style_title">Icons Style</string>
     <string name="icon_shapes_title">Icon Shapes</string>
@@ -251,5 +271,10 @@
     <string name="qs_3_rows">Force 3 rows</string>
     <string name="qs_4_rows">Force 4 rows</string>
     <string name="qs_5_rows">Force 5 rows</string>
+
+    <!-- Menu Items -->
+    <string name="menu_reset_defaults">Reset all settings</string>
+    <string name="menu_import_settings">Import settings from file...</string>
+    <string name="menu_export_settings">Export settings to file...</string>
 
 </resources>

@@ -16,11 +16,11 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.Utils.Helpers;
 import sh.siava.AOSPMods.XPrefs;
 
-public class QSHeaderManager implements IXposedModPack {
+public class QSHeaderManager extends XposedModPack {
     public static final String listenPackage = "com.android.systemui";
     
     private static boolean lightQSHeaderEnabled = false;
@@ -29,6 +29,9 @@ public class QSHeaderManager implements IXposedModPack {
     
     private static final ArrayList<View> tiles = new ArrayList<>();
     
+    public QSHeaderManager(Context context) { super(context); }
+    
+    @Override
     public void updatePrefs(String...Key)
     {
         if(XPrefs.Xprefs == null) return;
@@ -48,7 +51,6 @@ public class QSHeaderManager implements IXposedModPack {
         }
     }
     
-    private Context context;
     Object mBehindColors;
     
     public void setLightQSHeader(boolean state)
@@ -66,7 +68,7 @@ public class QSHeaderManager implements IXposedModPack {
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) {
         if(!lpparam.packageName.equals(listenPackage)) return;
         
-        
+
         Class<?> QSTileViewImplClass = XposedHelpers.findClass("com.android.systemui.qs.tileimpl.QSTileViewImpl", lpparam.classLoader);
         Class<?> UtilsClass = XposedHelpers.findClass("com.android.settingslib.Utils", lpparam.classLoader);
         Class<?> OngoingPrivacyChipClass = XposedHelpers.findClass("com.android.systemui.privacy.OngoingPrivacyChip", lpparam.classLoader);
@@ -116,16 +118,15 @@ public class QSHeaderManager implements IXposedModPack {
                         
                         Object mScrimBehind = XposedHelpers.getObjectField(param.thisObject, "mScrimBehind");
                         
-                        context = (Context) XposedHelpers.callMethod(mScrimBehind, "getContext");
                         ColorStateList states = (ColorStateList) XposedHelpers.callStaticMethod(UtilsClass,
                                 "getColorAttr",
-                                context,
-                                context.getResources().getIdentifier("android:attr/colorSurfaceHeader", "attr", listenPackage));
+                                mContext,
+                                mContext.getResources().getIdentifier("android:attr/colorSurfaceHeader", "attr", listenPackage));
                         int surfaceBackground = states.getDefaultColor();
                         
                         ColorStateList accentStates = (ColorStateList) XposedHelpers.callStaticMethod(UtilsClass,
                                 "getColorAccent",
-                                context);
+                                mContext);
                         int accent = accentStates.getDefaultColor();
                         
                         XposedHelpers.callMethod(mBehindColors, "setMainColor", surfaceBackground);
@@ -143,10 +144,9 @@ public class QSHeaderManager implements IXposedModPack {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         if(!lightQSHeaderEnabled) return;
-                        Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
-                        Resources res = context.getResources();
+                        Resources res = mContext.getResources();
                         
-                        int iconColor = context.getColor(res.getIdentifier("android:color/system_neutral1_900", "color", context.getPackageName()));
+                        int iconColor = mContext.getColor(res.getIdentifier("android:color/system_neutral1_900", "color", mContext.getPackageName()));
                         XposedHelpers.setObjectField(param.thisObject, "iconColor", iconColor);
                     }
                 });
@@ -154,14 +154,12 @@ public class QSHeaderManager implements IXposedModPack {
         XposedBridge.hookAllConstructors(QSTileViewImplClass, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
-                //we need the context anyway
                 tiles.add((View) param.thisObject);
                 if(!lightQSHeaderEnabled) return;
                 
                 Object colorActive = XposedHelpers.callStaticMethod(UtilsClass, "getColorAttrDefaultColor",
-                        context,
-                        context.getResources().getIdentifier("android:attr/colorAccent", "attr", "com.android.systemui"));
+                        mContext,
+                        mContext.getResources().getIdentifier("android:attr/colorAccent", "attr", "com.android.systemui"));
                 
                 XposedHelpers.setObjectField(param.thisObject, "colorActive", colorActive);
             }
@@ -274,8 +272,7 @@ public class QSHeaderManager implements IXposedModPack {
     }
     
     private void onStatChanged() throws Throwable {
-        if (context == null) return;
-        Resources res = context.getResources();
+        Resources res = mContext.getResources();
         
         boolean isDark = getIsDark();
         
@@ -298,29 +295,31 @@ public class QSHeaderManager implements IXposedModPack {
                 
                 int colorUnavailable = res.getColor(
                         res.getIdentifier("android:color/system_neutral1_10", "color", listenPackage),
-                        context.getTheme());
+                        mContext.getTheme());
                 
                 int colorInactive = res.getColor(
                         res.getIdentifier("android:color/system_accent1_10", "color", listenPackage),
-                        context.getTheme());
+                        mContext.getTheme());
                 
                 
-                for (View v : tiles) {
-                    XposedHelpers.setObjectField(v, "colorInactive", colorInactive);
-                    XposedHelpers.setObjectField(v, "colorUnavailable", colorUnavailable);
-                    
-                    Object lastState = XposedHelpers.getObjectField(v, "lastState");
-                    Object o = XposedHelpers.callMethod(v, "getBackgroundColorForState", lastState);
-                    XposedHelpers.callMethod(v, "setColor", o);
-                    
-                }
+                try {
+                    for (View v : tiles) {
+                        XposedHelpers.setObjectField(v, "colorInactive", colorInactive);
+                        XposedHelpers.setObjectField(v, "colorUnavailable", colorUnavailable);
+        
+                        Object lastState = XposedHelpers.getObjectField(v, "lastState");
+                        Object o = XposedHelpers.callMethod(v, "getBackgroundColorForState", lastState);
+                        XposedHelpers.callMethod(v, "setColor", o);
+        
+                    }
+                }catch (Exception ignored){}
             });
             t.start();
         }
     }
     
     private boolean getIsDark() {
-        return (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_YES) == Configuration.UI_MODE_NIGHT_YES;
+        return (mContext.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_YES) == Configuration.UI_MODE_NIGHT_YES;
     }
     
     

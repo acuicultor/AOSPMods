@@ -1,13 +1,20 @@
 package sh.siava.AOSPMods;
 
+import android.content.Context;
+
 import com.topjohnwu.superuser.Shell;
 
 import java.util.regex.Pattern;
 
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-public class miscSettings implements IXposedModPack {
-
+public class miscSettings extends XposedModPack {
+    
+    public miscSettings(Context context)
+    {
+        super(context);
+    }
+    
     @Override
     public void updatePrefs(String...Key) {
         if(XPrefs.Xprefs == null) return; //it won't be null. but anyway...
@@ -24,22 +31,19 @@ public class miscSettings implements IXposedModPack {
                 case "wifi_cell":
                     updateWifiCell();
                     break;
+                case "enableCustomFonts":
                 case "gsans_override":
-                    updateGSansOverride();
+                    updateFontsInfrastructure();
                     break;
             }
         }
         else
         {
             if(AOSPMods.isSecondProcess) return;
-    
+            
             //startup jobs
-            try {
-                updateSysUITuner();
-            }catch(Exception ignored){}
-            try {
-                updateGSansOverride();
-            } catch(Exception ignored){}
+            updateSysUITuner();
+            updateFontsInfrastructure();
         }
     }
 
@@ -47,8 +51,8 @@ public class miscSettings implements IXposedModPack {
         boolean WifiCellEnabled = XPrefs.Xprefs.getBoolean("wifi_cell", false);
 
         try {
-            String currentTiles = Shell.su("settings get secure sysui_qs_tiles").exec().getOut().get(0);
-
+            String currentTiles = Shell.cmd("settings get secure sysui_qs_tiles").exec().getOut().get(0);
+    
             boolean hasWifi = Pattern.matches(getPattern("wifi"), currentTiles);
             boolean hasCell = Pattern.matches(getPattern("cell"), currentTiles);
             boolean hasInternet = Pattern.matches(getPattern("internet"), currentTiles);
@@ -76,42 +80,44 @@ public class miscSettings implements IXposedModPack {
                 }
             }
     
-            com.topjohnwu.superuser.Shell.su("settings put global settings_provider_model " + providerModel + "; settings put secure sysui_qs_tiles \"" + currentTiles + "\"").exec();
+            com.topjohnwu.superuser.Shell.cmd("settings put global settings_provider_model " + providerModel + "; settings put secure sysui_qs_tiles \"" + currentTiles + "\"").exec();
         }catch (Exception ignored){}
     }
 
-    private static String getPattern(String tile)
-    {
+    private static String getPattern(String tile) {
         return String.format("^(%s,)(.+)|(.+)(,%s)(,.+|$)",tile,tile);
     }
-
+    
     private void updateSysUITuner() {
-        boolean SysUITunerEnabled = XPrefs.Xprefs.getBoolean("sysui_tuner", false);
-        String mode = (SysUITunerEnabled) ? "enable" : "disable";
-
-        try {
-            com.topjohnwu.superuser.Shell.su("pm " + mode + " com.android.systemui/.tuner.TunerActivity").exec();
+        try
+        {
+            boolean SysUITunerEnabled = XPrefs.Xprefs.getBoolean("sysui_tuner", false);
+            String mode = (SysUITunerEnabled) ? "enable" : "disable";
+            
+            com.topjohnwu.superuser.Shell.cmd("pm " + mode + " com.android.systemui/.tuner.TunerActivity").exec();
         }catch(Exception ignored){}
     }
 
-    private void updateGSansOverride() {
-        boolean GSansOverrideEnabled = XPrefs.Xprefs.getBoolean("gsans_override", false);
-    
-        try {
-
-            if (GSansOverrideEnabled){
-                com.topjohnwu.superuser.Shell.su(String.format("cp %s/data/fontz/GSans/*.ttf %s/system/fonts/ && cp %s/data/productz/etc/fonts_customization.xml.NEW %s/system/product/etc/fonts_customization.xml",XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot)).exec();
-            } else {
-                com.topjohnwu.superuser.Shell.su(String.format("rm -rf %s/system/fonts/*.ttf && cp %s/data/productz/etc/fonts_customization.xml.OLD %s/system/product/etc/fonts_customization.xml", XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot)).exec();
-            }
-        }catch(Exception ignored){}
+    private void updateFontsInfrastructure() {
+            boolean customFontsEnabled = XPrefs.Xprefs.getBoolean("enableCustomFonts", false);
+            boolean GSansOverrideEnabled = XPrefs.Xprefs.getBoolean("gsans_override", false);
+            
+            new Thread(() -> {
+                try {
+                    if (customFontsEnabled && GSansOverrideEnabled) {
+                        Shell.cmd(String.format("cp %s/data/fontz/GSans/*.ttf %s/system/fonts/ && cp %s/data/productz/etc/fonts_customization.xml.NEW %s/system/product/etc/fonts_customization.xml", XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot)).exec();
+                    } else if (customFontsEnabled) {
+                        Shell.cmd(String.format("rm -rf %s/system/fonts/*.ttf && cp %s/data/productz/etc/fonts_customization.xml.OLD %s/system/product/etc/fonts_customization.xml && cp -r %s/data/productz/fonts/* %s/system/product/fonts/", XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot)).exec();
+                    } else {
+                        Shell.cmd(String.format("rm -rf %s/system/fonts/*.ttf && rm -f %s/system/product/etc/fonts_customization.xml && rm -rf %s/system/product/fonts/*", XPrefs.MagiskRoot, XPrefs.MagiskRoot, XPrefs.MagiskRoot)).exec();
+                    }
+                }catch (Exception ignored){}
+            }).start();
     }
 
     @Override
     public boolean listensTo(String packageName) { return packageName.equals("com.android.systemui"); }
     
     @Override
-    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-        
-    }
+    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable { }
 }

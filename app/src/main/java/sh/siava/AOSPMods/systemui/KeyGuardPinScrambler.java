@@ -1,5 +1,7 @@
 package sh.siava.AOSPMods.systemui;
 
+import android.content.Context;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -8,13 +10,15 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class KeyGuardPinScrambler implements IXposedModPack {
+public class KeyGuardPinScrambler extends XposedModPack {
 	public static final String listenPackage = "com.android.systemui";
 	
 	private static boolean shufflePinEnabled = false;
+	
+	public KeyGuardPinScrambler(Context context) { super(context); }
 	
 	@Override
 	public void updatePrefs(String... Key) {
@@ -30,7 +34,7 @@ public class KeyGuardPinScrambler implements IXposedModPack {
 	public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
 		if(!lpparam.packageName.equals(listenPackage)) return;
 		
-		Class<?> KeyguardPinBasedInputViewControllerClass = XposedHelpers.findClass("com.android.keyguard.NumPadKey", lpparam.classLoader);
+		Class<?> NumPadKeyClass = XposedHelpers.findClass("com.android.keyguard.NumPadKey", lpparam.classLoader);
 		Class<?> KeyguardAbsKeyInputViewControllerClass = XposedHelpers.findClass("com.android.keyguard.KeyguardAbsKeyInputViewController", lpparam.classLoader);
 		
 		Collections.shuffle(digits);
@@ -42,7 +46,7 @@ public class KeyGuardPinScrambler implements IXposedModPack {
 			}
 		});
 		
-		XposedBridge.hookAllConstructors(KeyguardPinBasedInputViewControllerClass, new XC_MethodHook() {
+		XposedBridge.hookAllConstructors(NumPadKeyClass, new XC_MethodHook() {
 			@Override
 			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 				if(!shufflePinEnabled) return;

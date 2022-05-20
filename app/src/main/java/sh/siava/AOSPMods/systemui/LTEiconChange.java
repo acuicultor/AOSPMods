@@ -5,17 +5,20 @@ import android.content.Context;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class LTEiconChange implements IXposedModPack {
+public class LTEiconChange extends XposedModPack {
     public static final String listenPackage = "com.android.systemui";
     public static int SBLTEIcon = 0;
 
     private static final int DEFAULT = 0;
     private static final int FORCE_LTE = 1;
     private static final int FORCE_4G = 2;
-
+    
+    public LTEiconChange(Context context) { super(context); }
+    
+    @Override
     public void updatePrefs(String...Key)
     {
         if(XPrefs.Xprefs == null) return;

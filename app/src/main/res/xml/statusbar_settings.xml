@@ -11,6 +11,15 @@
             app:summaryOff="@string/double_tap_sleep_off"
             app:summaryOn="@string/double_tap_sleep_on" />
 
+        <SeekBarPreference
+            android:layout_width="wrap_content"
+            android:defaultValue="50"
+            android:key="centerAreaFineTune"
+            android:max="70"
+            android:title="@string/sb_center_fine_tune"
+            app:min="30"
+            app:updatesContinuously="true"/>
+
         <Preference
             app:fragment="sh.siava.AOSPMods.SettingsActivity$SBCFragment"
             app:key="sbc_header"
@@ -85,13 +94,6 @@
                 android:summaryOff="@string/general_off"
                 android:summaryOn="@string/general_on"
                 android:title="@string/ntsb_enabled_title" />
-            <EditTextPreference
-                android:key="networkTrafficTreshold"
-                android:selectAllOnFocus="true"
-                android:singleLine="true"
-                android:title="@string/ntsb_treshold_title"
-                app:defaultValue="10"
-                app:summary="@string/ntsb_treshold_summary" />
             <ListPreference
                 android:defaultValue="2"
                 android:entries="@array/network_sb_locations"
@@ -99,6 +101,10 @@
                 android:summary="%s"
                 android:key="networkTrafficPosition"
                 android:title="@string/ntsb_position_title" />
+            <Preference
+                app:fragment="sh.siava.AOSPMods.SettingsActivity$networkFragment"
+                app:key="network_settings_header"
+                app:title="@string/network_settings_pref" />
         </PreferenceCategory>
     </PreferenceCategory>
 </PreferenceScreen>

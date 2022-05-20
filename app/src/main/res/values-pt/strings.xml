@@ -92,8 +92,8 @@
     <string name="ntsb_category_title">Tráfego de rede</string>
     <string name="ntsb_enabled_title">Ativar monitor de tráfego</string>
     <string name="ntsb_position_title">Localização do monitor</string>
-    <string name="ntsb_treshold_title">Esconder automaticamente</string>
-    <string name="ntsb_treshold_summary">"Esconder se o tráfego for menor que… (Kilobytes)"</string>
+    <string name="ntsb_threshold_title">Esconder automaticamente</string>
+    <string name="ntsb_threshold_summary">"Esconder se o tráfego for menor que… (Kilobytes)"</string>
     <string name="so_double_tap_wake_title">Duplo toque para acender</string>
     <string name="so_double_tap_wake_summary">Usar duplo toque ao invés de um toque para acender o ecrã</string>
     <string name="overlay_none_title">(Padrão)</string>
@@ -210,5 +210,29 @@
     <string name="BB_transit_colors">Cores entre o intervalo</string>
     <string name="shufflePin_title">Pin aleatório</string>
     <string name="disable_overscroll">"Desativar o efeito elástico no final da navegação</string>
+    <string name="overscroll_on_summary">"Nota: Requer ativar as apps, para as quais pretende desativar o efeito elástico, no gestor da LSposed"</string>
+    <string name="volte_icon_title">Mostrar ícone VoLTE quando disponível</string>
+    <string name="font_overlays_enable_title">Ativar as fontes personalizadas</string>
+    <string name="torch_shortcut">Lanterna</string>
+    <string name="sb_center_fine_tune">Ajustar área central</string>
+    <string name="QQS_brightness_bottom_title">Controlo de brilho no fundo do painel</string>
+    <string name="so_taptaptorch_title">Ativar toque duplo para lanterna</string>
+    <string name="so_taptaptorch_summary">Toque duplo e manter premido para lanterna no ecrã de bloqueio</string>
+    <string name="so_tap_proximity_wake_title">Não acordar o ecrã quando o mesmo estiver coberto</string>
+    <string name="network_settings_pref">Definições do monitor</string>
+    <string name="network_mode_title">Estilo do monitor</string>
+    <string name="network_colorful_title">Colorir</string>
+    <string name="network_download_top">Velocidade de download no topo</string>
+    <string name="network_download_color_title">Cor de download</string>
+    <string name="network_upload_color_title">Cor de upload</string>
+    <string name="network_opacity_title">Opacidade</string>
+    <string name="network_interval_title">Intervalo de atualização (segundos)</string>
+    <string name="nt_mode_rxtx">Download &amp; Upload</string>
+    <string name="nt_mode_total">Downlaod + Upload (Combinado)</string>
+    <string name="nt_mode_rxonly">Apenas download</string>
+    <string name="nt_mode_txonly">Apenas upload</string>
+    <string name="menu_reset_defaults">Restaurar todas as definições</string>
+    <string name="menu_import_settings">Importar definições</string>
+    <string name="menu_export_settings">Exportar definições</string>
 
 </resources>

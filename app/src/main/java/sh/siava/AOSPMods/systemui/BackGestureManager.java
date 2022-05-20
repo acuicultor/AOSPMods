@@ -1,20 +1,24 @@
 package sh.siava.AOSPMods.systemui;
 
+import android.content.Context;
 import android.graphics.Point;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class BackGestureManager implements IXposedModPack {
+public class BackGestureManager extends XposedModPack {
     private static final String listenPackage = "com.android.systemui";
     public static float backGestureHeightFractionLeft = 1f; // % of screen height. can be anything between 0 to 1
     public static float backGestureHeightFractionRight = 1f; // % of screen height. can be anything between 0 to 1
     public static boolean leftEnabled = true;
     public static boolean rightEnabled = true;
-
+    
+    public BackGestureManager(Context context) { super(context); }
+    
+    @Override
     public void updatePrefs(String...Key)
     {
         if(XPrefs.Xprefs == null) return;

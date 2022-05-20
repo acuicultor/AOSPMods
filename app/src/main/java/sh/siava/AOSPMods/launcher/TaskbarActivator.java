@@ -1,13 +1,15 @@
 package sh.siava.AOSPMods.launcher;
 
+import android.content.Context;
+
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import sh.siava.AOSPMods.IXposedModPack;
+import sh.siava.AOSPMods.XposedModPack;
 import sh.siava.AOSPMods.XPrefs;
 
-public class TaskbarActivator implements IXposedModPack {
+public class TaskbarActivator extends XposedModPack {
 	private static final String listenPackage = "com.google.android.apps.nexuslauncher";
 	
 	private static final int TASKBAR_DEFAULT = 0;
@@ -15,6 +17,9 @@ public class TaskbarActivator implements IXposedModPack {
 	private static final int TASKBAR_OFF = 2;
 	
 	private static int taskbarMode = 0;
+	
+	public TaskbarActivator(Context context) { super(context); }
+	
 	@Override
 	public void updatePrefs(String... Key) {
 		String taskbarModeStr = XPrefs.Xprefs.getString("taskBarMode", "0");

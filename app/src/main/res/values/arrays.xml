@@ -4,12 +4,14 @@
         <item>@string/overlay_none_title</item>
         <item>@string/camera_shortcut</item>
         <item>@string/assistant_shortcut</item>
+        <item>@string/torch_shortcut</item>
     </array>
 
     <array name="lockScreenShortcut_values">
         <item>""</item>
         <item>camera</item>
         <item>assistant</item>
+        <item>torch</item>
     </array>
 
     <string-array name="qs_pulldown_side_names">
@@ -95,6 +97,20 @@
         <item>@string/ntsb_far_left</item>
         <item>@string/ntsb_mid_left</item>
         <item>@string/ntsb_mid_right</item>
+    </string-array>
+
+    <string-array name="network_mode_names">
+        <item>@string/nt_mode_rxtx</item>
+        <item>@string/nt_mode_total</item>
+        <item>@string/nt_mode_rxonly</item>
+        <item>@string/nt_mode_txonly</item>
+    </string-array>
+
+    <string-array name="network_mode_codes">
+        <item>0</item>
+        <item>3</item>
+        <item>1</item>
+        <item>2</item>
     </string-array>
 
     <string-array name="taskbar_option_names">
